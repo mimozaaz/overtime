@@ -121,6 +121,12 @@ h1,h2,h3{margin:0 0 8px;font-weight:800;}
 input,button{font-family:inherit}
 .story{line-height:1.8}
 .logo small{margin-top:10px;line-height:1.6}
+.dchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.dchip{font-size:12.5px;font-weight:700;padding:4px 9px;border-radius:20px;background:#1e1216;border:1px solid var(--line);color:var(--dim)}
+.dchip.g{color:var(--green);border-color:#1f4a2c}.dchip.b{color:var(--red);border-color:#5a1820}
+.stat .sl{font-size:11px;white-space:nowrap;margin-right:4px}
+.choices .btn{font-size:15.5px}.cost{font-size:12.5px;line-height:1.45}
+.btn.ghost.sm{text-align:center;padding-right:15px}
 </style></head><body>
 <div class="scrim-red" id="scrim"></div><div id="app"></div><div id="side" style="display:none;padding:14px 14px 90px"></div>
 <div class="navbar" id="nav" style="display:none">
@@ -1083,20 +1089,30 @@ function pctSpan(p){ p=clamp(Math.round(p*100),1,99);
  return `<span class="pct ${p>=65?"hi":p<40?"lo":""}">${p}%</span>`; }
 function hud(){
  const ph=phase(), total=G.map.km, left=kmLeft(), pc=clamp((1-left/total)*100,0,100);
- const bar=(ic,v,max,c)=>`<span class="stat">${ic}<span class="bar"><i style="width:${clamp(v/max*100,0,100)}%;background:${c}"></i></span></span>`;
- const tleft=Math.max(0,720-G.min);
- return `<div class="hud"><div class="hud-top"><span class="clock">🕐 ${hhmm(Math.max(0,G.min))}</span><span class="small">เหลือ ${Math.floor(tleft/60)} ชม. ${Math.round(tleft%60)} นาที</span><span class="night-badge ${ph.cls}">${ph.label}</span></div>
- <div class="road"><div class="road-fill" style="width:${pc}%"></div><span class="road-km">🏠 ${left} กม.</span></div>
- <div class="stats">${bar("❤️",G.hp,G.hpMax,"#ff2b3d")}${bar("⚡",G.stamina,100,"#ffb039")}${bar(G.sanity<30?"🫨":"🧠",G.sanity,100,"#4fb0ff")}</div>
- <div class="stats" style="margin-top:5px"><span class="stat">${G.veh==="เดินเท้า"?"🚶":"🚗"} ${G.veh}</span>${VEHS[G.veh].fuel?`<span class="stat">⛽${Math.round(G.fuel)}</span>`:""}<span class="stat">🔫${G.ammo}</span><span class="stat">💰${G.money}</span><span class="stat">🔊${G.noise}</span><span class="stat">🔋${Math.round(G.phoneBat)}</span></div>
- ${G.bleed||G.infection||G.legHurt||G.armHurt||G.drugAddict?`<div class="wounds">${G.bleed?"🩸เลือดไหล ":""}${G.infection?"🦠ติดเชื้อ ":""}${G.legHurt?"🦴ขาเจ็บ ":""}${G.armHurt?"✋มือเจ็บ ":""}${G.drugAddict?"💉ลงแดง":""}</div>`:""}</div>`;
+ const bar=(ic,nm,v,max,c)=>`<span class="stat"><span class="sl">${ic} ${nm}</span><span class="bar"><i style="width:${clamp(v/max*100,0,100)}%;background:${c}"></i></span></span>`;
+ const tleft=Math.max(0,720-G.min), gun=WEAPONS[G.weapon].gun||G.ammo>0;
+ const w=[G.bleed?"🩸 เลือดไหล (ต้องทำแผล)":"",G.infection?"🦠 แผลติดเชื้อ":"",G.legHurt?"🦴 ขาเจ็บ":"",G.armHurt?"✋ มือเจ็บ":"",G.drugAddict?"💉 ลงแดง":"",G.noise>=6?"🔊 เสียงดัง มีคนได้ยิน":""].filter(Boolean).join(" • ");
+ return `<div class="hud"><div class="hud-top"><span class="clock">🕐 ${hhmm(Math.max(0,G.min))}</span><span class="small">เหลือเวลา ${Math.floor(tleft/60)} ชม. ${Math.round(tleft%60)} น.</span><span class="night-badge ${ph.cls}">${ph.label}</span></div>
+ <div class="road"><div class="road-fill" style="width:${pc}%"></div><span class="road-km">ถึง 🏠 อีก ${left} กม.</span></div>
+ <div class="stats">${bar("❤️","เลือด",G.hp,G.hpMax,"#ff2b3d")}${bar("⚡","แรง",G.stamina,100,"#ffb039")}${bar("🧠","สติ",G.sanity,100,"#4fb0ff")}</div>
+ <div class="stats" style="margin-top:6px"><span class="stat">${G.veh==="เดินเท้า"?"🚶":"🚗"} ${G.veh}${VEHS[G.veh].fuel?` ⛽${Math.round(G.fuel)}%`:""}</span><span class="stat">🗡️ ${G.weapon}${gun?` 🔫${G.ammo}`:""}</span><span class="stat">💰${G.money}</span><span class="stat">🔋${Math.round(G.phoneBat)}%</span></div>
+ ${w?`<div class="wounds">${w}</div>`:""}</div>`;
+}
+let _snap=null;
+function deltaChips(){
+ const cur={rid:G.rid,hp:G.hp,st:G.stamina,sa:G.sanity,min:G.min,money:G.money,fuel:G.fuel,am:G.ammo}; const p=_snap; _snap=cur;
+ if(!p||p.rid!==cur.rid) return "";
+ const c=[], f=(ic,d,unit,goodUp)=>{ d=Math.round(d); if(!d)return; c.push(`<span class="dchip ${(d>0)===goodUp?"g":"b"}">${ic} ${d>0?"+":""}${d}${unit||""}</span>`); };
+ f("❤️",cur.hp-p.hp,"",true); f("⚡",cur.st-p.st,"",true); f("🧠",cur.sa-p.sa,"",true); f("💰",cur.money-p.money,"",true); if(VEHS[G.veh].fuel)f("⛽",cur.fuel-p.fuel,"",true); f("🔫",cur.am-p.am,"",true);
+ const dm=Math.round(cur.min-p.min); if(dm>0) c.push(`<span class="dchip">🕐 ผ่านไป ${dm} นาที</span>`);
+ return c.length?`<div class="dchips">${c.join("")}</div>`:"";
 }
 function show(o){
  clearTimer(); setTabUI("game"); setNav(true);
  UI.choices=(o.choices||[]).filter(Boolean); UI.scene=o.k||"";
  const logs=o.log===false?"":G.log.slice(-(Math.min(G._newLog||0,5))||-0.5).map(l=>`<div class="log">${l}</div>`).join(""); G._newLog=0;
  app.innerHTML=hud()+`<div class="scr"><div id="tbar"></div><div class="panel ${o.flash?"flash shake":""}">
-  ${o.loc?`<div class="loc">${o.loc}</div>`:""}<div class="story">${tk(o.text||"")}</div>${o.narr?`<div class="narr">${tk(o.narr)}</div>`:""}${logs?`<div style="margin-top:8px">${logs}</div>`:""}</div>
+  ${o.loc?`<div class="loc">${o.loc}</div>`:""}<div class="story">${tk(o.text||"")}</div>${o.narr?`<div class="narr">${tk(o.narr)}</div>`:""}${o.delta===false?"":deltaChips()}${logs?`<div style="margin-top:8px">${logs}</div>`:""}</div>
   ${o.html||""}<div class="choices" id="ch"></div></div>`;
  const C=$("#ch");
  UI.choices.forEach(c=>{ const b=document.createElement("button"); b.className="btn"+(c.primary?" primary":"")+(c.ghost?" ghost sm":""); if(c.dis)b.disabled=true;
@@ -1139,17 +1155,52 @@ function ambience(){
  const H=G.hunter; if(!H.dead&&H.at!=null){ const p=bfs(H.at,G.at); const d=p?p.length-1:9; if(d<=1) t+="\n\nขนที่ต้นคอลุก มีคนมองอยู่ ใกล้มาก"; else if(d===2&&(H.known||sk("read")>=1)) t+="\n\nมีใครบางคนตามรอยมา ยังไม่ถึง แต่ไม่ไกล"; }
  return t;
 }
+function dangerWord(o){
+ if(G.phoneBat<=0&&!G.seen[o.to]) return "ไม่รู้ว่ามีอะไร";
+ if(G.hunter.known&&!G.hunter.dead&&G.hunter.at===o.to) return "🎯 นักล่ารออยู่";
+ if(o.fire) return "🔥 ไฟไหม้ (เจ็บตัวแน่)";
+ if(o.gang) return "💀 มีแก๊ง (อันตราย)";
+ if(o.e.blocked>0) return "🚧 มีด่านขวาง";
+ if(!G.vis[o.to]) return "❓ ไม่มีข้อมูล";
+ const d=place(o.n).d+(phase().k==="hell"?1:0); return d<=0?"🟢 น่าจะเงียบ":d<=1?"🟡 เสี่ยงนิดหน่อย":d===2?"🟠 เสี่ยง":"🔴 อันตราย";
+}
+function routeChoice(o,i){
+ const pl=place(o.n), T=ETYPES[o.e.t], dark=G.phoneBat<=0;
+ const way={road:"",soi:" • ซอยเล็ก เงียบ",hwy:" • ทางหลวง เร็วแต่เสียงดัง",canal:" • นั่งเรือ",rail:" • เดินตามรางรถไฟ เงียบ",sewer:" • มุดท่อ เงียบมากแต่หลอน"}[o.e.t];
+ let sub=(dark?"":`ใช้ ${o.min} นาที • `)+dangerWord(o)+way;
+ if(o.note) sub+=` • ⚠️ ${o.note}`; if(o.runOut) sub+=" • ⚠️ น้ำมันไม่พอ ต้องทิ้งรถกลางทาง";
+ const dir=o.fwd>0?"➡️ ไป":o.fwd<0?"↩︎ ถอยกลับไป":"↔︎ อ้อมไป";
+ return {l:`${dir}${pl.n} ${pl.ic}`,sub,dis:!o.ok,primary:o.fwd>0&&i===0,k:"travel",meta:o,go:()=>travel(o)};
+}
+function allRoutes(){ return adj(G.at).map(travelInfo).sort((a,b)=>b.fwd-a.fwd||a.min-b.min); }
 function nodeMenu(){
  lookAround(); saveRun();
  const n=node(), pl=place(n), kit=G.inv.includes("ชุดปฐมพยาบาล");
- const ch=[{l:"🗺️ เดินทางต่อ",sub:G.phoneBat>0?"เปิดแผนที่ในมือถือ":"แบตหมด ต้องดูป้ายเอา",k:"map",primary:true,go:mapScreen}];
- if(n.fire){ show({loc:`${pl.ic} ${pl.n} • 🔥`,text:ambience(),k:"menu",choices:ch}); return; }
- if(n.loot>0) ch.push({l:"🔍 ค้นที่นี่",sub:`20 นาที • ${n.loot>=67?"ยังไม่มีใครแตะ":n.loot>=34?"ถูกค้นไปบ้างแล้ว":"แทบไม่เหลืออะไร"}`,k:"search",go:aSearch});
- if(G.hp<G.hpMax*.75||G.bleed>0||G.infection>0) ch.push({l:"🩹 ทำแผล",sub:`15 นาที • ${kit?"ใช้ชุดปฐมพยาบาล":"ไม่มีชุดปฐมพยาบาล ฉีกเสื้อพันเอา"}`,k:"heal",go:aHeal});
- ch.push({l:"🫥 ซ่อนตัวพัก",sub:"30 นาที • ฟื้นแรง ลบร่องรอย",k:"hide",go:aHide});
- if(G.phoneBat>3) ch.push({l:"📻 ฟังวิทยุ ดูข่าวในมือถือ",sub:"10 นาที • เห็นทางข้างหน้า กินแบต",k:"radio",go:aRadio});
- ch.push({l:"🧍 มองหาคนแถวนี้",sub:"20 นาที • อาจเจอคนช่วย หรือคนที่ไม่ควรเจอ",k:"seek",go:aSeek});
- show({loc:`${pl.ic} ${pl.n} • เหลือ ${kmLeft()} กม.`,text:ambience(),k:"menu",choices:ch});
+ const all=allRoutes(); let main=all.filter(o=>o.fwd>0&&o.ok); if(!main.length) main=all.filter(o=>o.ok);
+ const ch=main.map(routeChoice);
+ if(!n.fire){
+  if(G.bleed>0||G.hp<G.hpMax*.6) ch.push({l:"🩹 ทำแผลก่อน",sub:`ใช้ 15 นาที • ${kit?"มีชุดปฐมพยาบาล ได้เลือดคืนเยอะ":"ไม่มีชุดปฐมพยาบาล ได้แค่ห้ามเลือด"}`,k:"heal",go:aHeal});
+  if(n.loot>0) ch.push({l:"🔍 ค้นหาของที่นี่",sub:`ใช้ 20 นาที • ${n.loot>=67?"ของน่าจะเยอะ":n.loot>=34?"เหลือของบ้าง":"แทบไม่เหลือแล้ว"} • อาจเจอคน`,k:"search",go:aSearch});
+  ch.push({l:"⋯ ทำอย่างอื่น",sub:"ซ่อนพัก ฟังข่าว หาคน ดูแผนที่ ทางอื่น",ghost:true,k:"more",go:moreMenu});
+ }
+ const help=META.runs<=2&&G.moves<2?"\n\n👉 เลือกทางไปต่อ (ปุ่มสีแดงคือทางแนะนำ) หรือค้นของที่นี่ก่อน ทุกอย่างใช้เวลา ต้องถึง 🏠 ก่อน 07:00":"";
+ show({loc:`📍 ${pl.ic} ${pl.n}${n.fire?" • 🔥 กำลังไหม้":""}`,text:ambience()+help,k:"menu",choices:ch});
+}
+function moreMenu(){
+ const n=node(), all=allRoutes(), main=all.filter(o=>o.fwd>0&&o.ok), rest=all.filter(o=>!main.includes(o)||!main.length&&false).filter(o=>main.length?true:!o.ok);
+ const kit=G.inv.includes("ชุดปฐมพยาบาล");
+ const ch=[{l:"🫥 ซ่อนตัวพัก",sub:"ใช้ 30 นาที • ได้แรงคืน คนตามรอยยากขึ้น",k:"hide",go:aHide}];
+ if(G.phoneBat>3) ch.push({l:"📻 ฟังข่าวในมือถือ",sub:"ใช้ 10 นาที • รู้ว่าทางข้างหน้ามีอะไร (กินแบต)",k:"radio",go:aRadio});
+ ch.push({l:"🧍 มองหาคนแถวนี้",sub:"ใช้ 20 นาที • อาจได้เพื่อนร่วมทาง พ่อค้า หรือเจอเรื่อง",k:"seek",go:aSeek});
+ if(!(G.bleed>0||G.hp<G.hpMax*.6)&&G.hp<G.hpMax) ch.push({l:"🩹 ทำแผล",sub:"ใช้ 15 นาที"+(kit?"":" • ไม่มีชุดปฐมพยาบาล"),k:"heal",go:aHeal});
+ rest.forEach((o,i)=>ch.push(routeChoice(o,9)));
+ if(G.phoneBat>0) ch.push({l:"🗺️ ดูแผนที่",ghost:true,k:"mapview",go:mapScreen});
+ ch.push({l:"❓ วิธีเล่น",ghost:true,k:"helpview",go:helpScreen});
+ ch.push({l:"← กลับ",ghost:true,k:"back",go:nodeMenu});
+ show({loc:"⋯ ทำอย่างอื่น",text:"ทุกอย่างใช้เวลา และยิ่งอยู่นาน คนที่ตามรอยมาก็ยิ่งใกล้",k:"more",log:false,delta:false,choices:ch});
+}
+function helpScreen(){
+ show({loc:"❓ วิธีเล่น",log:false,delta:false,k:"help",text:"เป้าหมาย: ไปให้ถึง 🏠 ก่อน 07:00 โดยไม่ตาย\n\n• แต่ละจุด เลือก “➡️ ไป...” เพื่อเดินทางต่อ หรือทำอย่างอื่นที่นั่นก่อน\n• ทุกการกระทำใช้เวลา ดูนาฬิกามุมซ้ายบน\n• ❤️ เลือดหมด = ตาย • ⚡ แรงน้อย = หนีไม่พ้น ตีไม่โดน • 🧠 สติน้อย = ตัวเลขโอกาสเริ่มเชื่อไม่ได้\n• 🩸 เลือดไหลจะเสียเลือดไปเรื่อยๆ จนกว่าจะทำแผล\n• เดินเท้าไปไม่ถึงแน่ถ้าไกลเกิน 50 กม. ต้องหารถ (ค้นของตามลานจอดรถ ปั๊ม สุสานรถ)\n• รถใช้น้ำมัน ⛽ หมดกลางทางต้องเดิน\n• ตัวเลข % คือโอกาสสำเร็จของตัวเลือกนั้น\n• ปุ่ม 💬 ด้านล่างคือแชตกับคนที่รอ ยิ่งไปถึงช้า ที่นั่นยิ่งอันตราย\n• มีนักล่าหนึ่งคนตามรอยเราทั้งคืน อยู่ที่เดิมนานๆ มันจะตามทัน",choices:[{l:"← กลับ",primary:true,k:"back",go:nodeMenu}]});
 }
 function aSearch(){
  const n=node(), pl=place(n); passTime(20); G.noise=clamp(G.noise+1,0,10);
@@ -1198,16 +1249,7 @@ function aSeek(){
 }
 //========================= MAP / TRAVEL =========================
 function mapScreen(){
- const opts=adj(G.at).map(travelInfo).sort((a,b)=>b.fwd-a.fwd||node(a.to).x-node(b.to).x);
- const dark=G.phoneBat<=0;
- const ch=opts.map(o=>{ const pl=place(o.n), T=ETYPES[o.e.t], vis=G.vis[o.to];
-  const dir=o.fwd>0?"":o.fwd<0?"↩︎ ถอยกลับ: ":"↔︎ ";
-  let sub=dark?`${T.name} • ไม่รู้ระยะ`:`${T.name} ${o.e.km} กม. • ${o.min} นาที${o.fuel?` • ⛽${Math.round(o.fuel)}`:""}`;
-  if(o.note) sub+=` • ⚠️ ${o.note}`; if(o.runOut) sub+=" • ⚠️ น้ำมันไม่พอ ต้องทิ้งรถกลางทาง";
-  if(!dark){ if(o.gang) sub+=" • 💀 มีรายงานกลุ่มติดอาวุธ"; if(o.fire) sub+=" • 🔥 ไฟไหม้"; if(o.e.blocked>0&&vis) sub+=" • 🚧 มีด่าน"; if(G.hunter.known&&G.hunter.at===o.to&&!G.hunter.dead) sub+=" • 🎯 มันอยู่ที่นั่น"; }
-  return {l:`${dir}${pl.ic} ${pl.n}`,sub,dis:!o.ok,k:"travel",meta:o,go:()=>travel(o)}; });
- ch.push({l:"← ยังไม่ไป",ghost:true,k:"back",go:nodeMenu});
- show({loc:"🗺️ แผนที่",text:dark?"มือถือดับไปแล้ว เหลือแต่ป้ายบอกทางกับความจำ":"จุดสีแดงคือตรงนี้ 🏠 คือปลายทาง จุดที่เป็น ? คือที่ที่ยังไม่มีข้อมูล",html:dark?"":mapSVG(),k:"map",log:false,choices:ch});
+ show({loc:"🗺️ แผนที่",text:"วงแดงคือตรงนี้ 🏠 คือปลายทาง (อยู่บนสุด) จุด ? คือที่ที่ยังไม่มีข้อมูล 💀 คือที่ที่มีรายงานแก๊ง",html:mapSVG(),k:"mapview",log:false,delta:false,choices:[{l:"← กลับ",primary:true,k:"back",go:nodeMenu}]});
 }
 function mapSVG(){
  const M=G.map, W=360, rowH=58, H=(M.L+1)*rowH+30, X=n=>30+n.x*(W-60), Y=n=>H-28-n.l*rowH;
@@ -1265,7 +1307,7 @@ function playCard(card){
  G.used[card.id]=1; if(card.fl) G.flags[card.fl]=true;
  if(card.script) return window[card.script]();
  const pl=place(node());
- const ch=card.c.filter(c=>!c[5]||!c[5].req||c[5].req(G)).map(c=>({l:c[0],p:c[2]!=null?pOf(c[2],c[1]):null,k:"card",sub:c[1]&&sk(c[1])>0?"ถนัด":"",go:()=>resolveChoice(card,c)}));
+ const ch=card.c.filter(c=>!c[5]||!c[5].req||c[5].req(G)).map(c=>({l:c[0],p:c[2]!=null?pOf(c[2],c[1]):null,k:"card",sub:c[1]&&sk(c[1])>0?"👍 อาชีพคุณถนัดเรื่องนี้":"",go:()=>resolveChoice(card,c)}));
  if(!ch.length) return flow();
  show({loc:`${pl.ic} ${pl.n}`,text:card.t,k:"card",choices:ch,flash:!!card.timer,timer:card.timer,onTimeout:()=>{ const c=card.c[card.c.length-1]; const res=c[4]||c[3]; G.sanity-=5; runRes("ตัวแข็ง คิดไม่ทัน\n\n"+res[0],res[1]); }});
 }
@@ -1338,7 +1380,7 @@ function startCombat(key,opts){
 function alive(){ const e=G._c; return Math.max(1,Math.ceil(e.hp/e.unit-.001)); }
 function hpWord(){ const e=G._c, r=e.hp/e.hp0; return (e.count>1?`เหลือ ${alive()} จาก ${e.count} • `:"")+(r>.66?"ยังไม่เป็นอะไร":r>.33?"เริ่มเซ มีเลือด":"ยืนแทบไม่อยู่"); }
 function wdmg(){ const w=WEAPONS[G.weapon]; let d=(G.weapon==="มือเปล่า"&&G.job.fist)||w.dmg; if(!w.gun&&!w.throw){ d*=1+sk("force")*.08; if(w.dmg>=13&&w.dmg<=48&&/มีด|ขวาน|กรรไกร|คัตเตอร์|ตะขอ/.test(G.weapon)) d*=1+sk("blade")*.12; } if(G.trait.id==="reckless")d*=1.15; if(G.flags.adrenaline)d*=1.12; return d; }
-function combatScreen(text,flash){
+function combatScreen(text,flash,more){
  const e=G._c, w=WEAPONS[G.weapon], r=e.range;
  const tele=e.disarmed?"มันก้มหาอาวุธที่หลุดมือ":e.gun&&r>0?"🔫 มันเล็งมาทางนี้":pick(["🗡️ มันเงื้อจะฟาด","👊 มันย่อตัวจะพุ่งเข้าหา","มันค่อยๆ เดินวนหาช่อง","📢 มันทำท่าจะตะโกนเรียกพวก"]);
  const ch=[];
@@ -1351,7 +1393,7 @@ function combatScreen(text,flash){
   ch.push({l:`🗡️ ${G.weapon==="มือเปล่า"?"ต่อย":"ฟาดด้วย"+G.weapon}`,sub:r>0?"ไกลเกินไป ต้องเข้าประชิดก่อน":"",p:acc,k:"attack",go:()=>cAttack(acc,1)});
   if(r===0){ ch.push({l:"🦵 เล่นขา ให้มันตามไม่ได้",sub:"เบากว่า แต่หนีง่ายขึ้น",p:acc*.85,k:"aim",go:()=>cAttack(acc*.85,.55,"leg")}); ch.push({l:"✋ ฟาดมือ ให้อาวุธหลุด",p:acc*.75,k:"aim",go:()=>cAttack(acc*.75,.5,"arm")}); }
   if(r>0) ch.push({l:"🏃 วิ่งเข้าประชิด",sub:e.gun?"ต้องฝ่ากระสุนเข้าไป":"",k:"close",go:()=>{e.range=Math.max(0,r-1);G.stamina-=6;enemyTurn(1,"พุ่งเข้าไป ")}}); }
- ch.push({l:"🛡️ ตั้งรับ หาที่กำบัง",sub:"โดนเบาลงมาก",k:"defend",go:()=>enemyTurn(.35,"")});
+ ch.push({l:"🛡️ ตั้งรับ",sub:"รอบนี้โดนเบาลงมาก",k:"defend",go:()=>enemyTurn(.35,"")});
  const sw=G.inv.filter(x=>WEAPONS[x]&&x!==G.weapon&&(!WEAPONS[x].gun||G.ammo>0)); if(sw.length) ch.push({l:"🔄 เปลี่ยนอาวุธ",sub:sw.slice(0,3).join(", "),k:"swap",go:cSwap});
  if(G.inv.includes("ยากระตุ้น")&&!G.flags.adrenaline) ch.push({l:"💉 ฉีดยากระตุ้น",k:"drug",go:()=>{G.inv.splice(G.inv.indexOf("ยากระตุ้น"),1);takeDrug();enemyTurn(1,"")}});
  if((w.gun&&G.ammo>0)||G.masks.length){ const p=clamp(.4+sk("talk")*.08+(w.gun?.12:0)+(G.age>=46?.06:0)-(e.count-1)*.08-(e.key==="state"||e.key==="hunter"?.2:0),.05,.85); ch.push({l:"😤 ข่มขู่ให้ถอย",p,k:"scare",go:()=>{ if(chance(p)) return endCombat(false,"มันมองปากกระบอกปืน มองหน้า"+me()+" แล้วถอย ถอยไปเรื่อยๆ จนหายไปในความมืด"); enemyTurn(1,"มันไม่กลัว ") }}); }
@@ -1359,8 +1401,11 @@ function combatScreen(text,flash){
  const fr=G.comps.find(c=>!c.dog);
  if(fr) ch.push({l:`🗡️ ผลัก${fr.name}ไปรับแทน แล้ววิ่ง`,sub:"รอดแน่ แต่จะไม่มีวันลืม",k:"betray",go:()=>{ G.comps=G.comps.filter(c=>c!==fr); G.karma-=6; G.sanity=clamp(G.sanity+sanFx(-14),0,100); G.flags.abandoned=fr.name; G.flags.lostComp=true; G._c=null; passTime(10); toast("ทิ้งเขาไว้","เสียงเรียกชื่อ"+me()+"ดังไล่หลังมา แล้วก็เปลี่ยนเป็นเสียงอื่น แล้วก็เงียบ"); }});
  const fp=clamp(.38+skv("run")+G.stamina/350+(VEHS[G.veh].motor?.2+sk("drive")*.05:G.veh==="จักรยาน"?.08:0)+(e.legged?.25:0)-(e.gun?.08:0)-(e.key==="punk"?.1:0),.08,.92);
- ch.push({l:"🏃‍♂️ หนี",p:fp,k:"flee",go:()=>{ if(chance(fp)){ G.stamina=clamp(G.stamina-12,0,100); return endCombat(false,"วิ่งจนปอดแทบแตก หันไปมองอีกที ไม่มีใครตามมาแล้ว",true); } G.stamina=clamp(G.stamina-10,0,100); enemyTurn(1.15,"หนีไม่พ้น "); }});
- show({loc:`⚔️ ${place(node()).n}`,text,narr:`${hpWord()} • ${tele}\nระยะ: ${["ประชิด","กลาง","ไกล"][r]} • ถือ: ${G.weapon}`,k:"combat",flash,choices:ch});
+ ch.push({l:"🏃‍♂️ หนี",sub:"เลิกสู้ ไปต่อ",p:fp,k:"flee",go:()=>{ if(chance(fp)){ G.stamina=clamp(G.stamina-12,0,100); return endCombat(false,"วิ่งจนปอดแทบแตก หันไปมองอีกที ไม่มีใครตามมาแล้ว",true); } G.stamina=clamp(G.stamina-10,0,100); enemyTurn(1.15,"หนีไม่พ้น "); }});
+ const mainK=["attack","close","defend","flee"]; let list;
+ if(more){ list=ch.filter(c=>!mainK.includes(c.k)||c!==ch.find(x=>x.k===c.k)); list.push({l:"← กลับ",ghost:true,k:"back",go:()=>combatScreen(text)}); }
+ else { list=mainK.map(k=>ch.find(c=>c.k===k)).filter(Boolean); const others=ch.filter(c=>!list.includes(c)); if(others.length) list.push({l:"⋯ ท่าอื่น",sub:others.slice(0,3).map(c=>c.l.replace(/\(.*\)/,"").trim()).join(" / "),ghost:true,k:"cmore",go:()=>combatScreen(text,false,true)}); }
+ show({loc:`⚔️ สู้กับ ${e.name}`,text,narr:`ศัตรู: ${hpWord()}\n${tele}${r>0?" • อยู่ห่างกัน":" • ประชิดตัว"}`,k:more?"cmore":"combat",flash,delta:!more,choices:list});
 }
 function cSwap(){ const sw=G.inv.filter(x=>WEAPONS[x]&&x!==G.weapon&&(!WEAPONS[x].gun||G.ammo>0));
  show({loc:"🔄 เปลี่ยนอาวุธ",text:"มือควานในกระเป๋า ตายังไม่ละจากมัน",k:"swap",log:false,choices:sw.map(x=>({l:x,sub:`แรง ${WEAPONS[x].dmg}`,k:"pick",go:()=>{G.weapon=x;enemyTurn(.8,"คว้า"+x+"ขึ้นมา ")}})).concat([{l:"← ไม่เปลี่ยน",ghost:true,k:"back",go:()=>combatScreen("ยังเผชิญหน้ากันอยู่")}])}); }
@@ -1770,7 +1815,7 @@ function renderPrep(){
  draw(); window.__prep=()=>startNight(picks.slice(0,3));
 }
 function startNight(toks){ toks.forEach(t=>giveLoot(t,true)); G.log=[]; G._newLog=0; G.min=0; siren(); setNav(true);
- show({loc:"🚨 19:00",text:"ไซเรนดังยาวสามครั้ง เสียงประกาศจากลำโพงทุกเสา “ขณะนี้เวลาสิบเก้านาฬิกา กฎหมายทุกฉบับถูกระงับใช้เป็นเวลาสิบสองชั่วโมง ขอให้ทุกท่านโชคดี”\n\nแล้วทั้งเมืองก็เงียบ เงียบอยู่ประมาณสิบวินาที",narr:G.ruleText,k:"toast",log:false,choices:[{l:"▶ ไป",primary:true,k:"cont",go:flow}]}); }
+ show({loc:"🚨 19:00",text:"ไซเรนดังยาวสามครั้ง เสียงประกาศจากลำโพงทุกเสา “ขณะนี้เวลาสิบเก้านาฬิกา กฎหมายทุกฉบับถูกระงับใช้เป็นเวลาสิบสองชั่วโมง ขอให้ทุกท่านโชคดี”\n\nแล้วทั้งเมืองก็เงียบ เงียบอยู่ประมาณสิบวินาที",narr:"กฎปีนี้: "+G.ruleText+(META.runs<=2?"\n\nเป้าหมาย: ไปให้ถึง 🏠 ก่อน 07:00 แต่ละจุดเลือกว่าจะไปทางไหนต่อ หรือทำอะไรที่นั่นก่อน ทุกอย่างใช้เวลา":""),k:"toast",log:false,delta:false,choices:[{l:"▶ ไป",primary:true,k:"cont",go:flow}]}); }
 //========================= BOT (smoke test) =========================
 window.runBot=function(n,smart){ window.__BOT=true; const out={ends:{},err:[],stuck:0,arr:0,alive:0,n};
  for(let r=0;r<n;r++){ try{ newRun(chance(.5)?"m":"f",false); window.__prep(); let st=0;
@@ -1778,8 +1823,9 @@ window.runBot=function(n,smart){ window.__BOT=true; const out={ends:{},err:[],st
     if(st%9===4&&G.phoneBat>0) chatSend(G.flags.pendingUncle?pick(["uy","un"]):pick(["safe","code","cheer","hide"]));
     let c=null;
     if(smart){ const sc=UI.scene;
-     if(sc==="menu"){ const f=k=>cs.find(x=>x.k===k); c=(((G.bleed>0||G.hp<G.hpMax*.5)&&(G.inv.includes("ชุดปฐมพยาบาล")||G.bleed>0))?f("heal"):null)||(G.stamina<22?f("hide"):null)||(((VEHS[G.veh].sp<20&&kmLeft()>(720-G.min)/60*4)||(VEHS[G.veh].fuel&&G.fuel<12))?f("search"):null)||f("map"); }
-     else if(sc==="map"){ const t=cs.filter(x=>x.k==="travel"); const sco=x=>-x.meta.fwd*200+x.meta.min+(x.meta.gang?70:0)+(x.meta.fire?50:0)+(x.meta.e.blocked>0?40:0)+(x.meta.drop?250:0)+(x.meta.runOut?60:0)+Math.random()*10; c=t.sort((a,b)=>sco(a)-sco(b))[0]; }
+     if(sc==="menu"){ const f=k=>cs.find(x=>x.k===k); const t=cs.filter(x=>x.k==="travel"); const sco=x=>-x.meta.fwd*200+x.meta.min+(x.meta.gang?70:0)+(x.meta.fire?50:0)+(x.meta.e.blocked>0?40:0)+(x.meta.drop?250:0)+(x.meta.runOut?60:0)+Math.random()*10;
+      c=(((G.bleed>0||G.hp<G.hpMax*.5)&&(G.inv.includes("ชุดปฐมพยาบาล")||G.bleed>0))?f("heal"):null)||(((VEHS[G.veh].sp<20&&kmLeft()>(720-G.min)/60*4)||(VEHS[G.veh].fuel&&G.fuel<12))?f("search"):null)||t.sort((a,b)=>sco(a)-sco(b))[0]; }
+     else if(sc==="more"||sc==="mapview"||sc==="help"||sc==="cmore"){ c=cs.find(x=>x.k==="back")||cs[0]; if(sc==="more"&&G.stamina<22&&!G._bh){G._bh=1;c=cs.find(x=>x.k==="hide")||c;} }
      else if(sc==="combat"){ const f=k=>cs.find(x=>x.k===k), a=f("attack"), fl=f("flee"); c=(G.hp<G.hpMax*.3&&fl&&fl.p>.3)?fl:(a&&a.p>=.35)?a:f("close")||a||f("defend"); }
      else { const safe=cs.filter(x=>x.k!=="back"&&x.k!=="end"&&x.k!=="betray"&&x.k!=="rush"); const pool=safe.length?safe:cs; c=pool.slice().sort((a,b)=>((b.p==null?.6:b.p)+Math.random()*.25+(b.k==="fight"?-.3:0)+(b.k==="careful"?.4:0))-((a.p==null?.6:a.p)+Math.random()*.25+(a.k==="fight"?-.3:0)+(a.k==="careful"?.4:0)))[0]; } }
     (c||pick(cs)).go(); }

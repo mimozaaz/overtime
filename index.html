@@ -168,6 +168,9 @@ input,button{font-family:inherit}
 .pick-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .pick-grid .btn{margin:0;font-size:14px;padding:12px 6px;text-align:center}
 .pick-grid .btn .tic{display:block;font-size:24px}
+.blur{filter:blur(2.2px);transition:filter 2s}.ghostw{color:#ff2b3d;font-weight:800;letter-spacing:1px}
+.btn.phantom{border-style:dashed;opacity:.8;animation:pulse 2.4s infinite}
+.callcard{text-align:center;border-color:#2c6a3a!important}.callcard .scene-ic{animation:shake .5s infinite}
 </style></head><body>
 <div class="scrim-red" id="scrim"></div><div id="notif"></div><div id="app"></div><div id="side" style="display:none;padding:14px 14px 90px"></div>
 <div class="navbar" id="nav" style="display:none">
@@ -1282,11 +1285,11 @@ function deltaChips(){
  return c.length?`<div class="dchips">${c.join("")}</div>`:"";
 }
 function show(o){
- clearTimer(); setTabUI("game"); setNav(true);
+ clearTimer(); ringStop(); setTabUI("game"); setNav(true);
  UI.choices=(o.choices||[]).filter(Boolean); UI.scene=o.k||"";
  const logs=o.log===false?"":G.log.slice(-(Math.min(G._newLog||0,5))||-0.5).map(l=>`<div class="log">${l}</div>`).join(""); G._newLog=0;
  app.innerHTML=hud()+`<div class="scr"><div id="tbar"></div><div class="panel ${o.flash?"flash shake":""}">
-  ${o.ic?`<div class="scene-ic">${o.ic}</div>`:""}${o.loc?`<div class="loc">${o.loc}</div>`:""}<div class="story">${tk(o.text||"")}</div>${o.narr?`<div class="narr">${tk(o.narr)}</div>`:""}${o.delta===false?"":deltaChips()}${logs?`<div style="margin-top:8px">${logs}</div>`:""}</div>
+  ${o.ic?`<div class="scene-ic">${o.ic}</div>`:""}${o.loc?`<div class="loc">${o.loc}</div>`:""}<div class="story">${glitchText(tk(o.text||""))}</div>${o.narr?`<div class="narr">${tk(o.narr)}</div>`:""}${o.delta===false?"":deltaChips()}${logs?`<div style="margin-top:8px">${logs}</div>`:""}</div>
   ${o.html||""}<div class="choices" id="ch"></div></div>`;
  const C=$("#ch"); let sec=null, box=null, boxK=null;
  UI.choices.forEach(c=>{
@@ -1298,6 +1301,7 @@ function show(o){
   b.innerHTML=(c.ic?`<span class="tic">${c.ic}</span>`:"")+tk(c.l)+(c.badge?`<em class="bdg">${c.badge}</em>`:"")+(c.sub?`<div class="cost">${tk(c.sub)}</div>`:"")+(c.p!=null&&!c.half&&!c.mini?pctSpan(c.p):"");
   b.onclick=()=>{clearTimer();c.go();}; (box||C).appendChild(b); });
  if(o.flash) buzz(o.flash===2?[60,40,140]:90);
+ addPhantom(o.k);
  if(o.timer&&!window.__BOT){ const bar=$("#tbar"); bar.innerHTML='<div class="timer-bar"><i></i></div><div class="small center" id="tsec"></div>'; const t0=Date.now(); let lastS=-1; _tm=setInterval(()=>{ const el=(Date.now()-t0)/1000, p=1-el/o.timer; const i=bar.querySelector("i"); if(i)i.style.width=Math.max(0,p*100)+"%"; const sl=Math.ceil(o.timer-el); if(sl!==lastS){ lastS=sl; const ts=$("#tsec"); if(ts) ts.textContent=`⏳ ตัดสินใจภายใน ${Math.max(0,sl)} วินาที`; if(sl<=5){ beep(62,.1,"sine",.12); buzz(30); } } if(p<=0){clearTimer();o.onTimeout();} },100); }
  updateScrim(); window.scrollTo(0,0);
 }
@@ -1313,7 +1317,7 @@ function ambStart(){ if(window.__BOT||!SND.on||AMB) return; try{ AC=AC||new (win
  const len=AC.sampleRate*3, b=AC.createBuffer(1,len,AC.sampleRate), d=b.getChannelData(0); for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
  const s=AC.createBufferSource(); s.buffer=b; s.loop=true; const f=AC.createBiquadFilter(); f.type="lowpass"; f.frequency.value=240; const g=AC.createGain(); g.gain.value=.03; s.connect(f); f.connect(g); g.connect(AC.destination); s.start();
  AMB={s,t:null}; const tick=()=>{ if(!AMB) return; if(G&&!G.over&&G.min>=0){ const ph=phase().k, r=Math.random();
-   if(r<({early:.3,deep:.5,hell:.65,dawn:.25})[ph]) farShot(); else if(r<.72) farWail();
+   if(G.sanity<40&&chance(.35)) farStep(); else if(r<({early:.3,deep:.5,hell:.65,dawn:.25})[ph]) farShot(); else if(r<.72) farWail();
    if(G.hp<G.hpMax*.35) heart(); }
   AMB.t=setTimeout(tick,rnd(3500,9500)); }; AMB.t=setTimeout(tick,2500); }catch(e){} }
 function ambStop(){ if(!AMB) return; try{AMB.s.stop()}catch(e){} clearTimeout(AMB.t); AMB=null; }
@@ -1340,6 +1344,7 @@ function flow(){
  G._hunterCool=Math.max(0,(G._hunterCool||0)-1);
  const g=G.gangs.find(x=>x.at===G.at&&!x.met); if(g){ g.met=true; return evGang(g); }
  if(maybeBetrayal()) return;
+ if(shouldCall()) return incomingCall();
  nodeMenu();
 }
 function ambience(){
@@ -1395,6 +1400,8 @@ function nodeMenu(){
  let text=(G._trans?G._trans+"\n\n":"")+pick(sp.d).replace(/\{P\}/g,pl.n);
  if(firstHere) text=ambience()+"\n\n"+text;
  if(n.fire) text+="\n\n🔥 ไฟกำลังลามมาถึงตรงนี้ ควันแสบตา อยู่ต่อไม่ได้แล้ว";
+ if(G.sanity<45&&chance(.4)) text+="\n\n"+pick(HALLU);
+ phantomNotif();
  G._trans=null;
  const ch=[], HERE="👀 ตรงนี้ทำอะไรได้", WALK=`🚶 เดินไปจุดอื่นใน${pl.n}`, OUT="🧭 ออกจากที่นี่";
  if(!n.fire){
@@ -1404,6 +1411,8 @@ function nodeMenu(){
   if(hurt) ch.push({l:"🩹 ทำแผลตรงนี้",sec:HERE,sub:`15 นาที • ${kit?"มีชุดปฐมพยาบาล ได้เลือดคืนเยอะ":"ไม่มีชุดปฐมพยาบาล ได้แค่ห้ามเลือด"}`,k:"heal",go:aHeal});
   if(sp.hide) ch.push({l:`🫥 หลบ${sp.hide}พักสักครู่`,sec:HERE,sub:"30 นาที • หายเหนื่อย คนตามรอยยากขึ้น",k:"hide",go:aHide});
   useItemCh().forEach(c=>ch.push({...c,sec:HERE}));
+  if(pk("photo")&&(G.flags.photoN||0)<pk("photo")&&G.sanity<70) ch.push({l:`🖼️ หยิบรูป${G.w.n}ในกระเป๋าตังค์ขึ้นมาดู`,sec:HERE,sub:"2 นาที • สติกลับมา",k:"photo",go:lookPhoto});
+  if(G.phoneBat>10&&!G.rule.noSignal&&G.min-(G._lastCall==null?-999:G._lastCall)>60) ch.push({l:`📞 โทรหา${G.w.n}`,sec:HERE,sub:`5 นาที • ได้ยินเสียงแล้วใจชื้น แต่เสียงพูดอาจดังไป • กินแบต`,k:"callout",go:()=>{ G._lastCall=G.min; callTalk(true); }});
   ch.push({l:"🧍 มองหาคนแถวนี้",sec:HERE,sub:"20 นาที • อาจได้เพื่อนร่วมทาง พ่อค้า หรือเจอเรื่อง",k:"seek",go:aSeek});
   A.filter(x=>x.id!==sp.id).forEach(x=>{ const xs=spState(x.id), ex=exitsAt(x); const fw=ex.some(o=>o.fwd>0&&o.ok);
    ch.push({l:`${x.ic} ${x.n}`,half:true,sec:WALK,sub:(xs.v?"เคยดูแล้ว":"ยังไม่ได้ดู")+(fw?" • มีทางไปต่อ":ex.length?" • มีทางออก":""),k:"spot",meta:{fwd:fw?1:0,id:x.id},go:()=>goSpot(x.id)}); });
@@ -1478,6 +1487,7 @@ const PERKS={
  cash:{n:"💵 เงินเก็บใต้ที่นอน",d:"เริ่มคืนมีเงิน +300",c:[25,50,80]},
  intel:{n:"📻 สายข่าว",d:"เริ่มคืนรู้ทางข้างหน้าเพิ่ม",c:[30,70]},
  sixth:{n:"👁️ สัญชาตญาณ",d:"คนตามล่าออกตัวช้าลง 20 นาที",c:[35,70,110]},
+ photo:{n:"🖼️ รูปในกระเป๋าตังค์",d:"คืนละครั้ง (ระดับ 2 ได้สองครั้ง) หยิบรูปคนที่บ้านขึ้นมาดู สติกลับมา +15",c:[30,70]},
 };
 const pk=k=>(META.perks&&META.perks[k])||0;
 function runPoints(){ const e=G.ending; return Math.round((G.map.km-kmLeft())/4)+(e.isNew?15:0)+G.helped*3+(e.arrived?20:0)+(e.alive?5:0); }
@@ -1503,6 +1513,77 @@ function checkStash(){ if(!META.stash||!META.stash.length||G.flags.stashFound>=2
  const x=META.stash.splice(i,1)[0]; saveMeta(); G.flags.stashFound=(G.flags.stashFound||0)+1; const r=giveItem(x.it)||giveLoot(x.it==="แกลลอนน้ำมัน"?"fuel":"-");
  toast("📦 ของที่คุ้นตา",`ซอกมุมตรงนี้มีถุงพลาสติกห่อของอยู่ ปมที่มัดคุ้นมือ ข้างในมี${x.it} กับกระดาษหนึ่งแผ่น ลายมือตัวเองแต่เขียนตอนมือสั่น\n\n“ปีที่ ${x.y} ตอนนั้นเป็น${x.job} ถ้าอ่านอยู่ แปลว่ายังรอด ใช้ซะ แล้วกลับบ้านให้ได้”${r?"\n\nได้ "+r:"\n\n(กระเป๋าเต็ม ต้องทิ้งไว้)"}`);
  return true; }
+
+
+//========================= สติหลุด (หลอน) =========================
+const HALLU=["มีเสียงใครเรียกชื่อ{ME}เบาๆ จากข้างหลัง หันไปไม่มีใคร","เงาตรงมุมนั้นเหมือนคนยืนอยู่ กะพริบตาทีนึงก็หายไป แล้วก็กลับมาใหม่ ใกล้ขึ้น","ได้ยินเสียงฝีเท้าเดินตามจังหวะเดียวกับเท้าตัวเองพอดี หยุดเดิน เสียงก็หยุด","มือถือสั่นในกระเป๋า หยิบขึ้นมาดู ไม่มีอะไร","ได้กลิ่นกับข้าวที่บ้าน ชัดมาก ทั้งที่ไม่น่าจะเป็นไปได้","เสียงในหัวนับถอยหลังช้าๆ ไม่รู้ว่านับไปถึงอะไร"];
+const GHOSTW=["ข้างหลัง","อย่าหัน","เห็นแล้ว","กลับมา","ไม่ทันหรอก","มันรู้"];
+const PHANTOM=["🚪 ประตูบานนั้นเปิดอยู่ ไปทางนั้น","🧍 {W}ยืนโบกมือเรียกอยู่ตรงหัวมุม","🏠 นั่นบ้านไม่ใช่เหรอ เห็นไฟห้องนอนแล้ว","📞 รับสายที่กำลังดัง"];
+function glitchText(t){
+ if(!G||G.over||G.sanity>=35||window.__BOT||!t) return t;
+ const k=(35-G.sanity)/35, pb=.04+.1*k, pw=.01+.035*k;
+ return t.split(/(<[^>]+>)/).map(seg=>seg.startsWith("<")?seg:seg.replace(/[^\s\n]+/g,w=>chance(pw)?`<span class="ghostw">${pick(GHOSTW)}</span>`:chance(pb)?`<span class="blur">${w}</span>`:w)).join("");
+}
+function addPhantom(k){
+ if(!G||G.over||G.sanity>=30||window.__BOT||!(k==="menu"||k==="card")||!chance(.35)) return;
+ const C=$("#ch"); if(!C) return; const btns=C.querySelectorAll(".btn"); if(!btns.length) return;
+ const b=document.createElement("button"); b.className="btn phantom"; b.innerHTML=tk(pick(PHANTOM));
+ b.onclick=()=>{ b.disabled=true; b.innerHTML=tk("…ไม่มีอะไรตรงนั้น ไม่เคยมี"); G.sanity=clamp(G.sanity-2,0,100); passTime(3); buzz(200); setTimeout(()=>b.remove(),1800); };
+ const ref=btns[Math.floor(Math.random()*btns.length)]; ref.parentNode.insertBefore(b,ref);
+}
+function phantomNotif(){ if(window.__BOT||!G||G.sanity>=30||!chance(.2)) return;
+ const F={y:["{you} {i}อยู่หน้าบ้านแล้ว เปิดประตูให้หน่อย","{you}ถึงไหนแล้ว ทำไม{you}ยืนอยู่หลังหน้าต่าง"],e:["{you}ไม่ต้องมาแล้วนะ","{i}เห็น{you}เดินอยู่ในซอยเมื่อกี้ ทำไมไม่เข้าบ้าน"],p:["มึงอยู่ข้างหลังมึงแล้ว","กูเห็นมึงในไลฟ์ มึงกำลังโดนตาม"]}[G.w.arch]||["…"];
+ const t=tk(pick(F)); setTimeout(()=>{ if(G&&!G.over) notify(G.w.rel+(G.w.name?" "+G.w.name:""),t+"<div class='small'>(พอเปิดแชตดู ไม่มีข้อความนี้)</div>"); },1600); }
+function farStep(){ try{ const c=AC,t=c.currentTime; for(let i=0;i<4;i++){ const o=c.createOscillator(),g=c.createGain(); o.frequency.value=58; g.gain.setValueAtTime(.0001,t+i*.55); g.gain.exponentialRampToValueAtTime(.09,t+i*.55+.02); g.gain.exponentialRampToValueAtTime(.0001,t+i*.55+.18); o.connect(g); g.connect(c.destination); o.start(t+i*.55); o.stop(t+i*.55+.2); } }catch(e){} }
+
+//========================= โทรศัพท์จากคนที่บ้าน =========================
+const CALL={
+ y:{low:["“{you} {i}กินข้าวแล้วนะ ไม่ต้องห่วง ข้างนอกเสียงดัง แต่{i}ใส่หูฟังเปิดเพลงกลบอยู่” เสียงพยายามทำเป็นร่าเริง แต่สั่นตอนท้ายประโยค","“{you}อยู่ไหนแล้ว {i}นับดาวบนเพดานไปสามร้อยดวงแล้วนะ” แล้วก็หัวเราะเบาๆ แบบที่ตั้งใจให้{you}สบายใจ"],
+  mid:["“{you}… มีคนเดินวนอยู่หน้าบ้านชั่วโมงนึงแล้ว {i}ปิดไฟหมดแล้ว {i}ไม่ร้องไห้หรอก” แต่เสียงสะอื้นหลุดออกมาตอนจบ","กระซิบเบามาก “{i}อยู่ในตู้เสื้อผ้า เขาลองบิดลูกบิดประตูหน้าบ้านสองครั้งแล้ว {you}พูดอะไรก็ได้ {i}อยากได้ยินเสียง”"],
+  high:["เสียงหอบ เสียงอะไรล้มโครมอยู่ไกลๆ “{you} เขาเข้ามาในบ้านแล้ว {i}อยู่ใต้เตียง อย่าวางสายนะ อย่าวาง”","ไม่มีเสียงพูด มีแต่เสียงหายใจสั่นๆ กับเสียงฝีเท้าหนักๆ เดินไปมาในสาย แล้วเสียงกระซิบแผ่วๆ “รีบมา”"]},
+ e:{low:["“{you}กินข้าวหรือยัง” คำถามแรกเสมอไม่ว่าคืนไหน “{i}ไม่เป็นไรหรอก ค่อยๆ มา อย่าเสี่ยง”","“{i}จุดธูปบอกปู่ย่าตายายแล้ว ให้ช่วยพา{you}กลับบ้าน” เสียงนิ่ง สงบ ฟังแล้วอยากร้องไห้"],
+  mid:["“มีคนมาเรียกชื่อ{you}อยู่หน้าบ้าน เสียงเหมือน{you}เลย {i}ไม่ได้เปิด {i}รู้ว่าไม่ใช่”","“ไฟดับทั้งซอย {i}นั่งอยู่หลังตู้เย็นกับมีดอีโต้ อย่าห่วง {i}แก่แล้ว แต่ยังไม่ยอมใครง่ายๆ หรอก”"],
+  high:["“{you}… ไม่ต้องรีบแล้วนะ” เสียงเรียบเกินไป ข้างหลังมีเสียงคนหัวเราะ แล้วสายก็ตัด","เสียง{i}สวดมนต์ไม่เป็นศัพท์ ปนกับเสียงประตูถูกกระแทกเป็นจังหวะ ดังขึ้นทุกครั้ง"]},
+ p:{low:["“เออ ยังไม่ตาย กูนั่งกินมาม่าดูไลฟ์คนยิงกันอยู่ มึงล่ะ อย่าไปแวะเที่ยวที่ไหนนะเว้ย”","“มึงรู้ป่ะ กูทำป้ายรอไว้แล้ว เขียนว่า ‘ยินดีต้อนรับกลับจากนรก’ รีบมาดูซะ”"],
+  mid:["“มีคนลองงัดประตูห้องกูแล้วรอบนึง กูเอาตู้เย็นดันไว้ละ มึงอีกไกลมั้ย พูดตรงๆ”","“กูไม่ได้กลัวนะ” เงียบไปพักนึง “กูโกหก มึงพูดอะไรก็ได้ไปเรื่อยๆ ที”"],
+  high:["“มึง… มันเข้ามาแล้ว กูอยู่ในห้องน้ำ ล็อกแล้ว ประตูมันไม่แข็งขนาดนั้นหรอก” เสียงทุบประตูดังมาในสาย","ปลายสายมีแต่เสียงคนแปลกหน้าตะโกนเรียก{W}เหมือนเรียกหมา แล้วก็เสียงหัวเราะ"]},
+};
+const LISTEN={
+ y:{low:"ได้ยินเสียงทีวีเบาๆ กับเสียง{W}ฮัมเพลงตามโฆษณา ยังปลอดภัย ยังเป็นเด็กคนเดิม",mid:"ได้ยินเสียง{W}กระซิบท่องอะไรซ้ำๆ ฟังดีๆ เป็นชื่อ{ME} ข้างหลังมีเสียงเคาะประตูเป็นจังหวะ",high:"ได้ยินเสียงผู้ชายพูดใกล้โทรศัพท์มาก “อยู่ตรงไหนน้า ออกมาเถอะ” แล้วสายก็ตัด"},
+ e:{low:"ได้ยินเสียง{W}สวดมนต์เบาๆ เป็นจังหวะเดิมที่ได้ยินมาตั้งแต่เด็ก",mid:"ได้ยินเสียง{W}คุยกับใครบางคนผ่านประตู “ไม่มีใครอยู่หรอก ไปเถอะ” เสียงนิ่ง แต่หายใจถี่",high:"ได้ยินเสียง{W}ร้องเรียกชื่อ{ME} แล้วก็เงียบไป เหลือแต่เสียงข้าวของถูกรื้อ"},
+ p:{low:"ได้ยินเสียง{W}ด่าเกมในมือถือเบาๆ สลับกับเสียงเคี้ยวขนม",mid:"ได้ยินเสียง{W}ลากของหนักไปขวางอะไรบางอย่าง หอบแฮ่ก แล้วก็สบถ",high:"ได้ยินเสียงแก้วแตก เสียง{W}ตะโกนสู้ แล้วก็เสียงล้มลงกับพื้น"},
+};
+const MISSED={y:"{you}ทำไมไม่รับ {i}กลัว",e:"{you}ไม่รับสาย {i}ไม่โกรธนะ แค่บอกหน่อยว่ายังอยู่",p:"ตัดสายกูเหรอ โอเค มึงคงกำลังซ่อนอยู่ อย่าตายนะเว้ย"};
+const tBucket=()=>G.threat<35?"low":G.threat<70?"mid":"high";
+function ringStart(){ ringStop(); if(window.__BOT||!SND.on) return; const r=()=>{ beep(880,.12,"square",.03); setTimeout(()=>beep(660,.14,"square",.03),160); buzz([250,120,250]); }; r(); window._ring=setInterval(r,1300); }
+function ringStop(){ if(window._ring){ clearInterval(window._ring); window._ring=null; } }
+function nearDanger(){ const H=G.hunter; let d=9; if(!H.dead&&H.at!=null){ const p=bfs(H.at,G.at); d=p?p.length-1:9; } return d<=1||G.noise>=5||place(node()).d>=2; }
+function shouldCall(){ return G.phoneBat>5&&G.min>45&&G.min<700&&G.min-(G._lastCall==null?-999:G._lastCall)>110&&!G.rule.noSignal&&chance(.13); }
+function incomingCall(){
+ G._lastCall=G.min; const who=G.w.rel+(G.w.name?" “"+G.w.name+"”":""), dz=nearDanger();
+ const ch=[{l:"📞 รับสาย กระซิบคุย",sub:"ได้ยินเสียงแล้วใจชื้น แต่เสียงพูดอาจดังไป",k:"call",go:()=>callTalk(false)},
+  {l:"👂 รับ แต่ไม่พูด แค่ฟัง",sub:"เงียบที่สุด ได้รู้ว่าที่บ้านเป็นยังไง",k:"call",go:callListen},
+  {l:"📵 ตัดสาย",sub:"ปลอดภัยกว่า แต่จะไม่รู้อะไรเลย",k:"call",go:callDecline}];
+ show({ic:"📳",loc:`📞 ${who} กำลังโทรเข้า`,text:`มือถือสั่นในกระเป๋า หน้าจอสว่างวาบในความมืด ชื่อ${G.w.rel}ขึ้นมาตัวโต\n\nอีกไม่กี่วินาทีเสียงเรียกเข้าจะดัง${dz?" และตรงนี้ไม่ใช่ที่ที่ควรมีเสียงอะไรเลย":""}`,k:"call",flash:2,delta:false,log:false,choices:ch,timer:9,onTimeout:callIgnored});
+ ringStart();
+}
+function callText(){ if(G.homeBetray&&G.betrayType==="impostor"&&G.min>200) return "เสียงในสายเหมือน{W}แทบทุกอย่าง แต่เรียก{ME}ผิดไปคำเดียว เป็นคำที่{W}ไม่เคยใช้เรียก{ME}เลยสักครั้ง\n\n“รีบกลับมานะ ประตูไม่ได้ล็อก”";
+ if(G.homeBetray&&G.betrayType==="hostage"&&G.min>200) return "{W}บอกว่าปลอดภัยดี พูดเหมือนท่องมา และใกล้ๆ โทรศัพท์มีเสียงคนอื่นหายใจอยู่ด้วย";
+ return pick((CALL[G.w.arch]||CALL.y)[tBucket()]); }
+function callTalk(out){ ringStop(); passTime(out?5:4); if(out) G.phoneBat=clamp(G.phoneBat-5,0,100);
+ const b=tBucket(); G.sanity=clamp(G.sanity+(b==="low"?12:b==="mid"?4:sanFx(-10)),0,100); const hidden=G.noise<=1&&!nearDanger(); G.noise=clamp(G.noise+(hidden?1:2),0,10);
+ const t=callText()+(b==="high"?"\n\nสายตัดไป มือกำโทรศัพท์จนข้อนิ้วขาว ต้องไปให้เร็วกว่านี้":"");
+ if(!hidden&&chance(.18+place(node()).d*.07)) return toast("📞 คุยโทรศัพท์",t+"\n\nวางสายปุ๊บ ก็ได้ยินเสียงรองเท้าครูดพื้นใกล้ๆ มีคนได้ยินเสียง{ME}",()=>startCombat("robber"));
+ toast("📞 คุยโทรศัพท์",t); }
+function callListen(){ ringStop(); passTime(3); const b=tBucket(); G.sanity=clamp(G.sanity+(b==="low"?6:b==="mid"?sanFx(-3):sanFx(-9)),0,100);
+ let t=(LISTEN[G.w.arch]||LISTEN.y)[b]; if(G.homeBetray&&G.min>200) t+="\n\nแต่มีบางอย่างผิดปกติ เสียงที่ได้ยินในบ้านมีมากกว่าหนึ่งคน";
+ toast("👂 แค่ฟัง","กดรับแล้วยกขึ้นแนบหู ไม่พูดอะไรสักคำ\n\n"+t); }
+function callDecline(){ ringStop(); G.sanity=clamp(G.sanity+sanFx(-6),0,100); G.flags.missed=(G.flags.missed||0)+1; pushChat("them",MISSED[G.w.arch]||MISSED.y,true);
+ toast("📵 ตัดสาย","กดตัดสายแล้วคว่ำจอลง ไม่รู้ว่าเมื่อกี้{W}อยากบอกอะไร และอาจไม่มีโอกาสได้รู้"); }
+function callIgnored(){ ringStop(); G.noise=clamp(G.noise+4,0,10); G.sanity=clamp(G.sanity+sanFx(-4),0,100); G.flags.missed=(G.flags.missed||0)+1;
+ if(chance(.45)) return toast("🔔 เสียงเรียกเข้าดังลั่น","มือควานหาปุ่มเงียบไม่เจอ เสียงริงโทนดังก้องไปทั้งที่ ไม่กี่วินาทีต่อมา มีไฟฉายกวาดมาทางนี้",()=>startCombat(place(node()).d>=2?"robber":"worker"));
+ toast("🔔 เสียงเรียกเข้าดังลั่น","มือควานหาปุ่มเงียบไม่เจอ เสียงริงโทนดังก้องไปทั้งที่ จนสายตัดไปเอง แล้วทุกอย่างก็เงียบ เงียบเกินไป"); }
+function lookPhoto(){ G.flags.photoN=(G.flags.photoN||0)+1; passTime(2); G.sanity=clamp(G.sanity+15,0,100); toast("🖼️ รูปในกระเป๋าตังค์","หยิบรูปใบเล็กที่ยับจนขอบขาดออกมาดูใต้แสงจอมือถือ หน้า{W}ยิ้มอยู่ในนั้น ถ่ายไว้วันธรรมดาวันหนึ่ง ที่ไม่มีใครคิดว่าจะสำคัญ\n\nเก็บรูปใส่กระเป๋า ลุกขึ้น ไปต่อ"); }
 
 //========================= EXPLORATION ENGINE =========================
 function areaOf(n){ n=n||node(); const k=AREA_OF[n.p]||"road", nm=SPOT_N[n.p]||{}, dd=SPOT_D[n.p]||{}, sg=SIG[n.p]||{};

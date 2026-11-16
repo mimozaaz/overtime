@@ -197,6 +197,7 @@ const WEAPONS={
  "ไม้เบสบอล":{dmg:26,rng:0,noise:1,dur:25},
  "ตะขอเกี่ยวหมู":{dmg:28,rng:0,noise:0,dur:30},
  "มีดอีโต้":{dmg:30,rng:0,noise:1,dur:18},
+ "หอกด้ามไม้กวาด":{dmg:32,rng:0,noise:0,dur:14},
  "ถังดับเพลิง":{dmg:30,rng:0,noise:2,dur:3},
  "จอบ":{dmg:32,rng:0,noise:1,dur:25},
  "ค้อนปอนด์":{dmg:38,rng:0,noise:2,dur:45},
@@ -1078,7 +1079,7 @@ K("ch_wire","*","ที่นี่แคบพอดี ทางเข้า�
 const VER=2, SKEY="overtime.save.v2", MKEY="overtime.meta.v1";
 const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
 const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
-const META_DEF=()=>({v:VER,runs:0,endings:{},kills:0,saved:0,betrayed:0,worldGhosts:[],scars:[],year:13,recent:[],best:null,arrived:0,pts:0,perks:{},stash:[]});
+const META_DEF=()=>({v:VER,runs:0,endings:{},kills:0,saved:0,betrayed:0,worldGhosts:[],scars:[],year:13,recent:[],best:null,arrived:0,pts:0,perks:{},stash:[],legacy:null});
 function migrateMeta(m){
  if(!m) return META_DEF();
  const d=META_DEF(); for(const k in d) if(m[k]===undefined) m[k]=d[k];
@@ -1185,6 +1186,7 @@ function passTime(min){
  while(G.acc>=30){ G.acc-=30; worldStep(); }
 }
 function worldStep(){
+ if(G.mode==="home") return homeTick();
  const ph=phase().k;
  // wounds
  if(G.bleed>0){ G.hp-=G.bleed; addLog(`เลือดไหล -${G.bleed}`,"bad"); if(chance(.07)&&!G.infection){G.infection=2;addLog("แผลเริ่มบวมแดง ร้อนผ่าว","bad");} G.trail=Math.min(6,(G.trail||0)+1); }
@@ -1233,17 +1235,19 @@ function rollWaiter(age,g){
  if(w.you==="@") w.you=g==="m"?"พ่อ":"แม่"; if(w.you==="#") w.you=g==="m"?"ตา":"ยาย";
  w.self=w.self||w.you; w.name=pick(w.names); delete w.names; return w;
 }
-function newRun(gender,noMercy){
+function newRun(gender,noMercy,opt){
+ opt=opt||{}; const L=opt.legacy, HM=opt.mode==="hunt";
  META.runs++;
- const age=pick([ri(18,25),ri(26,45),ri(26,45),ri(46,55),ri(56,68)]);
- const job=pick(JOBS.filter(j=>age>=(j.min||18)&&age<=(j.max||99)));
- const trait=pick(TRAITS), rule=pick(YEAR_RULES), route=pick(ROUTES), w=rollWaiter(age,gender);
+ const age=L?L.age:pick([ri(18,25),ri(26,45),ri(26,45),ri(46,55),ri(56,68)]);
+ const job=(L&&JOBS.find(j=>j.id===L.job))||pick(JOBS.filter(j=>age>=(j.min||18)&&age<=(j.max||99)));
+ const trait=(L&&TRAITS.find(t=>t.id===L.trait))||pick(TRAITS), rule=pick(YEAR_RULES), route=pick(ROUTES), w=L&&!L.lost?{...L.w}:rollWaiter(age,gender);
  const kr=job.kmr||[60,120], km=ri(kr[0],kr[1]);
- const startPlace=chance(.6)?pick(job.home):pick(PKEYS.filter(k=>!["rich","police"].includes(k)));
+ const startPlace=HM?pick(["village","shophouse","flat","slum"].filter(k=>PLACES[k])):chance(.6)?pick(job.home):pick(PKEYS.filter(k=>!["rich","police"].includes(k)));
  const hpMax=(trait.id==="tough"?125:100)+(age<=25?5:age>=56?-18:age>=46?-8:0)+pk("tough")*8;
- const homeBetray=chance(.07);
+ const homeBetray=!HM&&chance(.07);
  G={v:VER,rid:Date.now()+Math.random(),gender,age,job,trait,rule:rule.e,ruleText:rule.t,w,noMercy:!!noMercy,
-  routeFrom:route[0],routeTo:route[1],dest:pick(job.dests||DESTS)+" ย่าน"+route[1],
+  mode:HM?"hunt":"run",bounty:0,mercy:0,targets:0,legacy:L||null,
+  routeFrom:route[0],routeTo:route[1],dest:HM?"แคมป์สโมสรนักล่า":L&&!L.lost?L.dest:pick(job.dests||DESTS)+" ย่าน"+route[1],
   min:-8,acc:0,hp:hpMax,hpMax,stamina:100,sanity:100,
   fuel:0,noise:0,trail:0,money:job.money||ri(150,700),ammo:0,phoneBat:job.bat||ri(55,90),
   karma:0,kills:0,helped:0,betrayedCount:0,drugAddict:0,bleed:0,infection:0,legHurt:false,armHurt:false,
@@ -1264,14 +1268,18 @@ function newRun(gender,noMercy){
  if(pk("dog")) G.comps.push({name:"เจ้าดำ",dog:true,intro:"",motive:"จริงใจ",loyalty:90,hp:70});
  G.inv.forEach(it=>{ if(WEAPONS[it]&&!WEAPONS[it].throw&&(!WEAPONS[it].gun||G.ammo>0)&&WEAPONS[it].dmg>WEAPONS[G.weapon].dmg) G.weapon=it; });
  if(META.scars.includes("ไม่ไว้ใจใคร")) G.flags.wary=true;
+ if(L){ G.vet=Math.min(3,L.nights||1); G.hpMax+=G.vet*4; if(L.scars.includes("kidney")) G.hpMax-=25; if(L.scars.includes("leg")) G.legHurt=true; if(L.scars.includes("mind")) G.sanity=80; G.hp=G.hpMax;
+  if(L.grudges&&L.grudges.length) G.grudges=L.grudges.map(g=>({who:g.who,deep:g.deep,shown:false})).concat(chance(.5)?G.grudges.slice(0,1):[]); }
+ if(HM){ G.hunter.off=true; G.flags.huntMode=true; }
  G.map=genMap(km,startPlace); G.at=0; G.startId=0; G.homeId=G.map.nodes.length-1;
  // gangs
  const mid=G.map.nodes.filter(n=>n.l>0&&n.p!=="home");
  const ng=Math.round(2+G.map.L/2.5)+(G.rule.moreGangs?2:0); G.gangs=[];
  for(let i=0;i<ng&&mid.length;i++) G.gangs.push({at:pick(mid.filter(n=>n.l>1||mid.length<4)||mid).id,type:pick(["mask","mask","punk","punk","cult","hunter","robber"])});
  lookAround(); if(pk("intel")) reveal(pk("intel")*2);
- buildTimeline(); CHAT[w.arch].open.forEach(t=>pushChat("them",t,true));
- renderPrep();
+ buildTimeline(); if(HM) pushChat("them",{y:"{you}จะไปไหน ไซเรนจะดังแล้วนะ",e:"{you}ไม่อยู่บ้านเหรอ ไซเรนจะดังแล้ว",p:"มึงอยู่ไหน ไซเรนจะดังละ"}[w.arch],true); else CHAT[w.arch].open.forEach(t=>pushChat("them",t,true));
+ if(L&&!L.lost) pushChat("them",LEG_OPEN[w.arch],true);
+ if(HM) renderPrepHunt(); else renderPrep();
 }
 function ageNote(){ const a=G.age; return a<=25?"อายุน้อย: วิ่งไว แรงฟื้นเร็ว แต่สติแตกง่าย":a>=56?"สูงวัย: เลือดน้อย เดินช้า แต่ใจนิ่ง พูดแล้วคนฟัง":a>=46?"วัยกลางคนตอนปลาย: เลือดน้อยลงนิด ใจนิ่งกว่า":"วัยทำงาน: สมดุลทุกด้าน"; }
 function rollLoot(n,quiet){ // from current place pool
@@ -1314,6 +1322,7 @@ function vehIc(v){ v=v||G.veh; return v==="เดินเท้า"?"🚶":v===
 function itemIc(x){ const w=WEAPONS[x]; if(w) return w.gun?"🔫":w.throw?(w.lure?"🧨":"🍾"):x==="มือเปล่า"?"👊":x==="หน้าไม้"?"🏹":"🗡️";
  return {"ชุดปฐมพยาบาล":"🩹","ขวดน้ำ":"💧","อาหารกระป๋อง":"🥫","พาวเวอร์แบงก์":"🔋","ไฟฉาย":"🔦","ยาแก้อักเสบ":"💊","ยากระตุ้น":"💉","ผ้าใบ":"🟫","ลวดดัก":"🪤","ลูกหน้าไม้":"🏹","แกลลอนน้ำมัน":"⛽"}[x]||"📦"; }
 function hud(){
+ if(G.mode==="home") return hudHome();
  const ph=phase(), total=G.map.km, left=kmLeft(), pc=clamp((1-left/total)*100,0,100), tleft=Math.max(0,720-G.min);
  const full=clamp(Math.ceil(G.hp/G.hpMax*5),0,5), hs="❤️".repeat(full)+"🖤".repeat(5-full);
  const W=WEAPONS[G.weapon], st=[];
@@ -1321,7 +1330,7 @@ function hud(){
  if(G.legHurt) st.push("🦴 ขาเจ็บ"); if(G.armHurt) st.push("✋ มือเจ็บ"); if(G.infection) st.push("🦠 แผลติดเชื้อ"); if(G.noise>=6) st.push("🔊 มีคนได้ยินเรา");
  if(VEHS[G.veh].fuel&&G.fuel<20) st.push("⛽ น้ำมันใกล้หมด"); if(G.phoneBat<=10) st.push(G.phoneBat<=0?"📵 มือถือดับ":"🪫 แบตใกล้หมด"); if(G.drugAddict&&!G.flags.adrenaline) st.push("💉 ลงแดง");
  return `<div class="hud"><div class="hud-top"><span class="clock">🕐 ${hhmm(Math.max(0,G.min))}</span><span class="small">อีก ${Math.floor(tleft/60)} ชม. ${Math.round(tleft%60)} น. ฟ้าสาง</span><span class="night-badge ${ph.cls}">${ph.label}</span></div>
- <div class="road"><div class="road-fill" style="width:${pc}%"></div><span class="road-km">🏠 อีก ${left} กม.</span></div>
+ <div class="road"><div class="road-fill" style="width:${pc}%"></div><span class="road-km">${G.mode==="hunt"?`💰 ${G.bounty} • 🎯 ${G.targets} • ⛺ อีก ${left} กม.`:`🏠 อีก ${left} กม.`}</span></div>
  <div class="hud-row"><span class="hearts">${hs}</span><span class="gear"><span>${vehIc()} ${G.veh}</span><span>${itemIc(G.weapon)} ${G.weapon}${W.gun?` ×${G.ammo}`:""}</span></span></div>
  ${st.length?`<div class="status">${st.map(x=>`<span>${x}</span>`).join("")}</div>`:""}</div>`;
 }
@@ -1390,6 +1399,7 @@ function heart(){ if(G.hp<G.hpMax*.35){ beep(60,.12,"sine",.14); setTimeout(()=>
 
 //========================= FLOW =========================
 function flow(){
+ if(G.mode==="home") return homeFlow();
  if(G.over) return renderEnding();
  G.hp=clamp(G.hp,-99,G.hpMax); G.sanity=clamp(G.sanity,0,100); G.stamina=clamp(G.stamina,0,100);
  if(G.hp<=0) return finishEnding(deathCause());
@@ -1436,8 +1446,8 @@ function routeChoice(o,i,sp){
  const how=sn&&sp.exv?sp.exv:EXV[t];
  let sub=how+(sn?" • 🤫 ทางลับ ไม่ผ่านด่าน":"")+(dark?"":` • ⏱ ${o.min} นาที`)+"\n"+dangerWord(o);
  if(o.note) sub+=` • ⚠️ ${o.note}`; if(o.runOut) sub+=" • ⚠️ น้ำมันไม่พอ ต้องเดินต่อ";
- const dir=o.fwd>0?"มุ่งหน้าบ้าน → ":o.fwd<0?"↩︎ ถอยกลับไป ":"↔︎ อ้อมไป ";
- return {l:`${dir}${pl.n}${o.n.p==="home"?" (บ้าน!)":""}`,ic:pl.ic,sub,dis:!o.ok,route:true,k:"travel",meta:o,go:()=>travel({...o,sn})};
+ const dir=o.fwd>0?(G.mode==="hunt"?"มุ่งหน้าแคมป์ → ":"มุ่งหน้าบ้าน → "):o.fwd<0?"↩︎ ถอยกลับไป ":"↔︎ อ้อมไป ";
+ return {l:`${dir}${pl.n}${o.n.p==="home"?(G.mode==="hunt"?" (แคมป์สโมสร!)":" (บ้าน!)"):""}${G.mode==="hunt"&&o.to===G.startId?" (บ้านตัวเอง)":""}`,ic:pl.ic,sub,dis:!o.ok,route:true,k:"travel",meta:o,go:()=>travel({...o,sn})};
 }
 function allRoutes(){ return adj(G.at).map(travelInfo).sort((a,b)=>b.fwd-a.fwd||a.min-b.min); }
 function tripStrip(){
@@ -1470,7 +1480,9 @@ function nodeMenu(){
   useItemCh().forEach(c=>ch.push({...c,sec:HERE}));
   if(pk("photo")&&(G.flags.photoN||0)<pk("photo")&&G.sanity<70) minis.push({l:`🖼️ ดูรูป${G.w.n}`,mini:true,sec:HERE,k:"photo",go:lookPhoto});
   if(G.phoneBat>10&&!G.rule.noSignal&&G.min-(G._lastCall==null?-999:G._lastCall)>60) minis.push({l:`📞 โทรหา${G.w.n}`,mini:true,sec:HERE,k:"callout",go:()=>{ G._lastCall=G.min; callTalk(true); }});
-  ch.push({l:"🧍 มองหาคนแถวนี้",sec:HERE,sub:"20 นาที • อาจได้เพื่อนร่วมทาง พ่อค้า หรือเจอเรื่อง",k:"seek",go:aSeek});
+  if(G.mode==="hunt") ch.push({l:"🔎 ส่องหาเป้าแถวนี้",sec:HERE,sub:"20 นาที • อาจเจอเป้า นักล่าคนอื่น หรือกับดัก",k:"seek",go:aSeek});
+  else ch.push({l:"🧍 มองหาคนแถวนี้",sec:HERE,sub:"20 นาที • อาจได้เพื่อนร่วมทาง พ่อค้า หรือเจอเรื่อง",k:"seek",go:aSeek});
+  if(G.mode==="hunt"&&G.at===G.startId&&G.moves>0) ch.push({l:"🏠 กลับเข้าบ้าน จบคืนนี้",sec:HERE,sub:`ค่าหัวตอนนี้ ${G.bounty} บาท`,k:"end",go:()=>huntEnd("home")});
   minis.forEach(x=>ch.push(x));
   A.filter(x=>x.id!==sp.id).forEach(x=>{ const xs=spState(x.id), ex=exitsAt(x); const fw=ex.some(o=>o.fwd>0&&o.ok);
    ch.push({l:`${x.ic} ${x.n}`,half:true,sec:WALK,sub:(xs.v?"เคยดูแล้ว":"ยังไม่ได้ดู")+(fw?" • มีทางไปต่อ":ex.length?" • มีทางออก":""),k:"spot",meta:{fwd:fw?1:0,id:x.id},go:()=>goSpot(x.id)}); });
@@ -1525,6 +1537,7 @@ function aRadio(){
 }
 function aSeek(){
  passTime(20);
+ if(G.mode==="hunt") return huntEncounter();
  if(G.partnerRoll&&!G.partner&&!G.flags.partnerMet&&G.min>100&&chance(.5)) return meetPartner();
  const r=Math.random();
  if(r<(G.rule.helpBonus||G.rule.crowd?.42:.3)&&G.comps.length<3) return meetCompanion();
@@ -1551,7 +1564,10 @@ const PERKS={
  photo:{n:"🖼️ รูปในกระเป๋าตังค์",d:"คืนละครั้ง (ระดับ 2 ได้สองครั้ง) หยิบรูปคนที่บ้านขึ้นมาดู สติกลับมา +15",c:[30,70]},
 };
 const pk=k=>(META.perks&&META.perks[k])||0;
-function runPoints(){ const e=G.ending; return Math.round((G.map.km-kmLeft())/4)+(e.isNew?15:0)+G.helped*(G.rule.helpBonus?8:3)+(e.arrived?20:0)+(e.alive?5:0); }
+function runPoints(){ const e=G.ending;
+ if(G.mode==="hunt") return Math.round(G.bounty/150)+G.mercy*4+(e.isNew?15:0)+(e.alive?5:0);
+ if(G.mode==="home") return 15+(e.isNew?15:0)+G.helped*3+(G.comps.some(c=>c.tr)?20:0)+(e.alive?5:0);
+ return Math.round((G.map.km-kmLeft())/4)+(e.isNew?15:0)+G.helped*(G.rule.helpBonus?8:3)+(e.arrived?20:0)+(e.alive?5:0); }
 function renderPerks(back){
  setNav(false); setTabUI("game"); UI.choices=[];
  app.innerHTML=`<div class="scr"><h2>🧬 สิ่งที่ติดตัวข้ามปี</h2><div class="tag" style="margin:6px 0 12px">ทุกคืนที่ผ่านมา ไม่ว่าจะรอดหรือไม่ ทิ้งอะไรบางอย่างไว้ในตัวคุณ ใช้ 🩸 แต้มรอดแลกเป็นสัญชาตญาณที่ติดไปทุกคืนหลังจากนี้</div>
@@ -1618,6 +1634,7 @@ const BHINT={hostage:{y:"{you}กลับมาบ้านนะ แค่น�
  cult:{y:"{you}รู้ไหม คืนนี้สวยมากเลย ทุกคนใส่ชุดขาว",e:"คืนนี้{i}รู้สึกสะอาดขึ้นเยอะเลย{you}",p:"มึง กูเพิ่งเข้าใจอะไรบางอย่างเลยว่ะ คืนนี้มันคือการชำระ"},
  money:{y:"{you}ทำประกันชีวิตไว้กี่บาทนะ ถามเฉยๆ",e:"",p:"เออ มึงเคยบอกว่าสมุดบัญชีอยู่ลิ้นชักไหนนะ"}};
 function buildTimeline(){
+ if(G.mode==="hunt"){ const tl=[]; let t=ri(30,70); HUNT_CHAT[G.w.arch].slice().sort(()=>Math.random()-.5).slice(0,5).forEach(m=>{ tl.push([t,m]); t+=ri(70,120); }); const v=pick(VISIT[G.w.arch]); G.visit=v; tl.push([ri(200,480),v.ask,"uncle"]); G.tl=tl.sort((a,b)=>a[0]-b[0]).filter(x=>x[0]<700); return; }
  const C=CHAT[G.w.arch], own=(WCHAT[G.w.rel]||[]).slice().sort(()=>Math.random()-.5).slice(0,ri(4,5)), gen=C.tl.map(x=>x[1]).sort(()=>Math.random()-.5).slice(0,2);
  const msgs=own.concat(gen).sort(()=>Math.random()-.5); const tl=[]; let t=ri(40,90);
  msgs.forEach(m=>{ tl.push([t,m]); t+=ri(55,105); });
@@ -1811,6 +1828,7 @@ function arrive(opt){
  if(G.gangs.some(x=>x.at===G.at&&!x.met)) return flow();
  if(opt&&opt.noCard) return flow();
  if(checkStash()) return;
+ if(G.mode==="hunt"){ if(G.at===G.startId&&G.flags.rushHome) return huntEnd("home"); if(G.at!==G.startId&&chance(.5)){ G._trans=null; return huntEncounter(); } }
  G._trans=pick(["เดินทางมาจนถึง","ในที่สุดก็มาถึง","ฝ่าความมืดมาจนถึง"])+place(node()).n+(curSpot().n?" ตรง"+curSpot().n:"");
  const due=G.chains.findIndex(c=>c.at<=G.moves); if(due>=0){ const id=G.chains.splice(due,1)[0].id; const c=CARDS.find(x=>x.id===id); if(c) return playCard(c); }
  if(!G.flags.dragged&&G.comps.some(c=>!c.dog)&&["deep","hell"].includes(phase().k)&&chance(.12)){ G._trans=null; return evDragged(); }
@@ -2047,7 +2065,7 @@ function enemyTurn(mult,pre){
  combatScreen(pre+pick(FOE_HIT[e.key]||FOE_HIT.worker)+extra,true);
 }
 function combatWin(){
- const e=G._c; const k=Math.max(1,alive()); G.kills+=k; META.kills+=k; G.karma-=1; killSanity(); if(G.kills>=6)G.flags.hunterPath=true;
+ const e=G._c; const k=Math.max(1,alive()); G.kills+=k; META.kills+=k; if(G.mode==="hunt"&&e.key!=="dogs"&&!e.onWin) G.bounty+=120*k; G.karma-=1; killSanity(); if(G.kills>=6)G.flags.hunterPath=true;
  let loot=[]; if(chance(.5)){const m=ri(80,450);G.money+=m;loot.push(`เงิน ${m}`);} if(e.gun&&chance(.6)){const a=ri(1,4);G.ammo+=a;loot.push(`กระสุน ${a}`); if(chance(.4)){const r=giveItem("ปืนพก"); if(r)loot.push(r);} }
  if(chance(.2)){ const r=giveItem(pick(["มีดพก","ไม้เบสบอล","ชุดปฐมพยาบาล","ยากระตุ้น","พาวเวอร์แบงก์"])); if(r)loot.push(r); }
  if(e.key==="punk"&&VEHS[G.veh].sp<25&&chance(.6)){ G.veh="มอไซค์"; G.fuel=Math.max(G.fuel,ri(25,45)); loot.push("มอไซค์ของมัน"); }
@@ -2064,6 +2082,8 @@ function combatLose(){
  const e=G._c; G._c=null;
  if(G._homeFight){ G._homeFight=null; return finishEnding(["raided",2]); }
  if(e.deathEnd) return finishEnding(e.deathEnd);
+ if(G.mode==="home") return finishEnding(homeDeath(e));
+ if(G.mode==="hunt"){ G._foe=e; return finishEnding(huntDeath(e)); }
  if(!G.flags.captured&&["mask","cult","hunter","tourist"].includes(e.key)&&chance(e.key==="hunter"||e.key==="tourist"?(e.htype==="streamer"?.55:.14):.3)) return captureScene(e.key);
  if(!G.flags.captured&&["robber","state","worker","punk"].includes(e.key)&&chance(.24)) return clinicScene("fight");
  G._foe=e; finishEnding(deathByFoe(e));
@@ -2157,14 +2177,6 @@ function evHunter(){
 function hunterDead(){ const H=G.hunter; H.dead=true; G.flags.killedHunter=true; const t=H.type;
  const loot=t==="driver"?()=>{ takeVeh("กระบะ",ri(40,70)); }:t==="streamer"?()=>{ giveItem("พาวเวอร์แบงก์"); G.money+=ri(800,2000); }:()=>{ giveItem(t==="blade"?"มีดสปาต้า":"ปืนพก"); G.ammo+=4; };
  toast("มันตายแล้ว",{sniper:"ปีนขึ้นไปดูบนดาดฟ้า ข้างศพมีสมุดเล่มเล็ก เขียนรายชื่อคนสิบกว่าชื่อ ทุกชื่อถูกขีดฆ่า ยกเว้นชื่อสุดท้าย ซึ่งเป็นชื่อ"+me(),blade:"มีดหลุดจากมือมัน รอยยิ้มยังค้างอยู่บนหน้าแม้ตาจะไม่ขยับแล้ว ในกระเป๋ามันมีรูป"+me()+"ถ่ายจากไกลๆ ตั้งแต่สัปดาห์ก่อน",driver:"รถมันยังติดเครื่องอยู่ กุญแจยังเสียบ ที่เบาะหลังมีเชือกกับเทปกาวกองอยู่ ตอนนี้มันเป็นของ"+me()+"แล้ว",streamer:"โดรนตัวสุดท้ายร่วงลงข้างศพ จอมือถือมันยังไลฟ์อยู่ คอมเมนต์ไหลไม่หยุด “ฮีโร่” “ตัดต่อหรือเปล่า” “ใครก็ได้ไปหาคนนี้ที”",pair:"สองคนนอนข้างกัน มือยังจับกันอยู่ บนนิ้วมีแหวนคู่วงเดียวกัน ไม่มีใครสมควรได้เห็นภาพแบบนี้ แต่"+me()+"ไม่มีเวลาคิด"}[t]||"มันตายแล้ว",()=>{loot();flow();}); }
-function evGrudge(){
- const g=G.grudges.find(x=>!x.shown); g.shown=true;
- const pt=pOf(.4,"talk");
- show({loc:"👁️ หน้าคุ้นๆ",text:`มีคนยืนขวางทาง จ้องหน้า${me()}นิ่ง “จำกูได้ไหม” เขาคือ${g.who} “กูรอคืนนี้มาทั้งปี กูนับวัน”`,flash:true,k:"card",choices:[
-  {l:"⚔️ สู้",k:"fight",go:()=>startCombat("worker",{name:"คนที่รอคืนนี้มาทั้งปี",count:1,hpMul:1.5})},
-  {l:"🙇 ขอโทษจากใจ",p:pt,k:"card",go:()=>chance(pt)?(G.sanity=clamp(G.sanity+5,0,100),G.karma+=2,toast("เขาร้องไห้","เขายืนสั่นอยู่นาน แล้วอาวุธก็หลุดจากมือ “กูแค่อยากให้มึงรู้ว่ากูเจ็บ” เขาเดินจากไปโดยไม่หันกลับมา")):toast("สายไปแล้ว","“มึงมีเวลาขอโทษทั้งปี”",()=>startCombat("worker",{name:"คนที่รอคืนนี้มาทั้งปี",count:1,hpMul:1.5}))},
-  {l:"🏃 หนี",p:pOf(.5,"run"),k:"card",go:()=>chance(pOf(.5,"run"))?(G.stamina=clamp(G.stamina-15,0,100),toast("หนีพ้น","เขาตะโกนตามหลัง ว่ารู้ว่า"+me()+"พักอยู่ที่ไหน",()=>{G.threat=clamp(G.threat+10,0,100);flow();})):startCombat("worker",{name:"คนที่รอคืนนี้มาทั้งปี",count:1,hpMul:1.5})}]});
-}
 function evStory(){
  G.flags.sawStory=true; const sl=pick(["hunterClub","boss","stateSecret","mask"]); G.storylines[sl]=1;
  const T={hunterClub:"มีซองจดหมายสีครีมตกอยู่ ตราประทับทอง ข้างในเป็นบัตรเชิญงานเลี้ยงคืนนี้ พร้อมแคตตาล็อก “เป้าแนะนำประจำปี” หน้าสิบสองมีรูป"+me()+" พร้อมที่ทำงาน เวลาเลิกงาน และเส้นทางกลับ",
@@ -2384,6 +2396,7 @@ function pushChat(side,txt,unread){ G.chatlog.push({side,txt:tk(txt),t:hhmm(Math
 function updateChatBadge(){ const b=$("#chatBadge"); if(!b||!G)return; b.style.display=G.unread>0?"inline-block":"none"; b.textContent=G.unread; }
 function later(fn){ const rid=G.rid; if(window.__BOT) return fn(); setTimeout(()=>{ if(G&&G.rid===rid&&!G.over) fn(); },900+Math.random()*900); }
 function chatSend(kind){
+ if(G.mode==="home") return homeChatSend(kind);
  const C=CHAT[G.w.arch], bt=G.homeBetray?G.betrayType:null;
  if(G.rule.noSignal&&chance(.4)){ pushChat("me","(ส่งไม่ออก ไม่มีสัญญาณ)"); return; }
  G.phoneBat=clamp(G.phoneBat-1,0,100);
@@ -2400,10 +2413,11 @@ function renderChat(){
  side.innerHTML=`<div class="scr"><div class="panel" style="padding:10px 12px"><div style="display:flex;justify-content:space-between"><b>💬 ${G.w.rel}${G.w.name?" "+G.w.name:""}</b><span class="small">🔋 ${Math.round(G.phoneBat)}%</span></div>${dead?`<div class="warnmsg">⚠️ แบตหมด ติดต่อ${G.w.n}ไม่ได้แล้ว ไม่รู้ว่าที่นั่นเป็นยังไง</div>`:""}</div><div class="chat" id="chatBox"></div><div style="clear:both" id="chatIn"></div></div>`;
  const box=$("#chatBox"); G.chatlog.forEach(m=>{ const d=document.createElement("div"); d.className="msg "+(m.side==="me"?"me":"them"); d.innerHTML=`${m.txt}<span class="t">${m.t}</span>`; box.appendChild(d); }); box.scrollTop=box.scrollHeight;
  if(dead||G.over) return; const C=$("#chatIn");
- (G.flags.pendingUncle?[["✅ ให้เข้า","uy"],["⛔ ไม่ให้เข้า","un"]]:[["📍 ถามว่าปลอดภัยไหม","safe"],["🔐 ถามรหัสลับ","code"],["💪 ให้กำลังใจ","cheer"],["🤫 สั่งให้ไปซ่อน","hide"]]).forEach(([l,k])=>{ const b=document.createElement("button"); b.className="btn sm"; b.textContent=l; b.onclick=()=>chatSend(k); C.appendChild(b); });
+ (G.mode==="home"?[["📍 ถามว่าถึงไหนแล้ว","where"],["🔐 ถามรหัสลับ","code"],["🗺️ บอกทางเลี่ยงอันตราย","adv"],["💪 ให้กำลังใจ","cheer"]]:G.flags.pendingUncle?[["✅ ให้เข้า","uy"],["⛔ ไม่ให้เข้า","un"]]:[["📍 ถามว่าปลอดภัยไหม","safe"],["🔐 ถามรหัสลับ","code"],["💪 ให้กำลังใจ","cheer"],["🤫 สั่งให้ไปซ่อน","hide"]]).forEach(([l,k])=>{ const b=document.createElement("button"); b.className="btn sm"; b.textContent=l; b.onclick=()=>chatSend(k); C.appendChild(b); });
 }
 //========================= ARRIVAL / ENDINGS =========================
 function resolveArrival(){
+ if(G.mode==="hunt") return huntClub();
  G.arrived=true; const W=G.w.n+(G.w.name||"");
  if(G.homeBetray) return betrayScene();
  if(G.flags.uncleBad){ if(G.threat>=80){ G.sisterSafe=false; return finishEnding(["raided",1]); }
@@ -2438,7 +2452,7 @@ function finalEnding(home){
  const s=G,f=s.flags; let r;
  if(f.gang&&(r=chooseEnd("gang",[1,s.kills>=6,1,home,f.captured,!s.sisterSafe,f.resistance,!home,s.grudges.some(g=>g.shown)&&s.kills>=3,s.kills>=10]))) return r;
  if(home&&f.gotArmored&&s.min<=330) return ["secret",3];
- const nE=Object.keys(META.endings).length, hasF=s.inv.includes("แฟลชไดรฟ์หลักฐาน");
+ const nE=mainN(), hasF=s.inv.includes("แฟลชไดรฟ์หลักฐาน");
  const sec=[hasF&&s.kills<3,hasF&&s.kills>=3,f.hasProof&&home,0,0,f.resistance,f.metSelf,home&&nE>=30&&s.sisterSafe&&s.helped>=6,home&&nE>=60&&META.arrived>=10&&s.kills===0,nE>=80&&s.karma<-8];
  if(sec.some(Boolean)&&chance(.7)&&(r=chooseEnd("secret",sec))) return r;
  if(f.partnerDied&&chance(.7)) return ["love",1];
@@ -2448,32 +2462,32 @@ function finalEnding(home){
  if(home) return chooseEnd("home",[s.sisterSafe,s.comps.filter(c=>!c.dog).length===1&&s.sisterSafe,!s.sisterSafe,s.kills>=3&&s.sisterSafe,!s.sisterSafe||s.phoneBat<=0,s.legHurt||s.armHurt||f.lostKidney,s.comps.length>=2,f.lostComp&&!s.comps.length,s.betrayedCount>0,s.sisterSafe]);
  return chooseEnd("dawn",[kmLeft()<=10,s.sisterSafe&&kmLeft()<=20&&s.phoneBat>0,node().p==="shophouse"||node().p==="flat",node().p==="temple",s.comps.length>0,1,s.sanity<25||!s.inv.length,s.phoneBat>0,s.comps.length>0&&s.helped>=2,1]);
 }
-function resolveDawn(){ if(G.flags.endCommunity) return finishEnding(["secret",4]); finishEnding(finalEnding(false)); }
-function deathCause(){ let i=9; if(G.infection>0)i=5; else if(G.drugAddict>0&&G.stamina<25)i=8; else if(node().p==="pier")i=4; else if(G.bleed>0)i=node().p==="bridge"?0:pick([0,7]); else if(G.stamina<=5)i=7; else if(VEHS[G.veh].motor)i=1; return ["dead",i]; }
+function resolveDawn(){ if(G.mode==="hunt") return huntEnd("dawn"); if(G.flags.endCommunity) return finishEnding(["secret",4]); finishEnding(finalEnding(false)); }
+function deathCause(){ if(G.mode==="hunt") return huntDeath(null); let i=9; if(G.infection>0)i=5; else if(G.drugAddict>0&&G.stamina<25)i=8; else if(node().p==="pier")i=4; else if(G.bleed>0)i=node().p==="bridge"?0:pick([0,7]); else if(G.stamina<=5)i=7; else if(VEHS[G.veh].motor)i=1; return ["dead",i]; }
 function finishEnding(pair){
- if(!pair) pair=["dawn",9]; const [cat,i]=pair, e=ENDINGS[cat].list[i];
+ if(!pair) pair=G.mode==="hunt"?["hwin",6]:G.mode==="home"?["dhome",9]:["dawn",9]; const [cat,i]=pair, e=ALL_END[cat].list[i];
  G.over=true; G._c=null; clearTimer();
- const alive=!(cat==="dead"||(cat==="raided"&&i===4)||(cat==="betray"&&i===3)||(cat==="broadcast"&&i===0));
+ const alive=e[2]!==undefined?e[2]:!(cat==="dead"||(cat==="raided"&&i===4)||(cat==="betray"&&i===3)||(cat==="broadcast"&&i===0));
  G.ending={cat,i,title:e[0],text:tk(e[1]),alive,arrived:!!G.arrived&&alive};
  if(G._carry){ G.ending.last=G._carry; G._carry=null; }
  if(!alive){ const lm=G.chatlog.filter(m=>m.side==="them").slice(-1)[0];
   const foe=G._foe?pick([`คนสุดท้ายที่เห็นคือ${G._foe.name}`,`${G._foe.name}เดินจากไปโดยไม่หันกลับมามอง`,`${G._foe.name}ค้นกระเป๋า แล้วหยิบมือถือไปด้วย`]):"";
   G.ending.epi=(foe?foe+"\n\n":"")+(lm&&G.phoneBat>0?`📱 ในกระเป๋ามือถือสั่นอีกครั้ง ข้อความใหม่จาก${G.w.rel}: “${lm.txt}”\nไม่มีใครอ่าน`:`📵 ${G.w.rel}${G.w.name?" "+G.w.name:""}ยังนั่งรออยู่ที่${G.dest} รอจนเช้า`); }
  const key=cat+":"+i; G.ending.isNew=!META.endings[key]; if(!META.endings[key]) META.endings[key]={first:Date.now()};
- META.saved+=G.helped; META.betrayed+=G.betrayedCount; if(G.ending.arrived) META.arrived++;
- if(cat==="hunter") META.worldGhosts.push({type:"hunter"}); if(!alive) META.worldGhosts.push({type:"corpse"}); META.worldGhosts=META.worldGhosts.slice(-4);
+ META.saved+=G.helped; META.betrayed+=G.betrayedCount; if(G.ending.arrived&&ENDINGS[cat]) META.arrived++;
+ if(cat==="hunter") META.worldGhosts.push({type:"hunter"}); if(!alive&&ENDINGS[cat]) META.worldGhosts.push({type:"corpse"}); META.worldGhosts=META.worldGhosts.slice(-4);
  if(alive){ if(G.betrayedCount>0&&!META.scars.includes("ไม่ไว้ใจใคร"))META.scars.push("ไม่ไว้ใจใคร"); if(G.sanity<30&&!META.scars.includes("นอนไม่หลับ"))META.scars.push("นอนไม่หลับ"); }
- G.ending.pts=runPoints(); META.pts=(META.pts||0)+G.ending.pts;
+ G.ending.pts=runPoints(); META.pts=(META.pts||0)+G.ending.pts; saveLegacy();
  META.recent=Object.keys(G.used).concat(META.recent).slice(0,60); META.year++;
  saveMeta(); try{localStorage.removeItem(SKEY);}catch(e){}
  renderEnding();
 }
 function renderEnding(){
- ambStop(); buzz([200,100,400]); setNav(false); setTabUI("game"); app.classList.remove("glitch"); const e=G.ending, n=Object.keys(META.endings).length; UI.choices=[]; UI.scene="end";
- app.innerHTML=`<div class="scr dead"><div class="big-end"><div class="ecat">${ENDINGS[e.cat].cat}${e.isNew?" • ใหม่":""}</div><div class="et">${e.title}</div></div>
+ ambStop(); buzz([200,100,400]); setNav(false); setTabUI("game"); app.classList.remove("glitch"); const e=G.ending, n=G.mode==="hunt"?modeN("hunt"):G.mode==="home"?modeN("home"):mainN(), nT=G.mode==="hunt"||G.mode==="home"?30:100; UI.choices=[]; UI.scene="end";
+ app.innerHTML=`<div class="scr dead"><div class="big-end"><div class="ecat">${ALL_END[e.cat].cat}${e.isNew?" • ใหม่":""}</div><div class="et">${e.title}</div></div>
  ${e.last?`<div class="panel"><div class="story small">${e.last}</div></div>`:""}<div class="panel"><div class="story">${e.text}</div>${e.epi?`<div class="narr">${e.epi}</div>`:""}</div>
- <div class="panel"><div class="kv"><span>ตัวตน</span><b>${G.gender==="m"?"ชาย":"หญิง"} ${G.age} ปี • ${G.job.name}</b></div><div class="kv"><span>ปลายทาง</span><b>${G.dest}</b></div><div class="kv"><span>คนที่รอ</span><b>${G.w.rel}</b></div>
- <div class="kv"><span>เวลา</span><b>${hhmm(Math.min(720,Math.max(0,G.min)))}</b></div><div class="kv"><span>ระยะที่เหลือ</span><b>${kmLeft()} จาก ${G.map.km} กม.</b></div><div class="kv"><span>ฆ่า / ช่วย</span><b>${G.kills} / ${G.helped}</b></div><div class="kv"><span>ตอนจบที่ปลดล็อก</span><b>${n}/100</b></div></div>
+ <div class="panel"><div class="kv"><span>ตัวตน</span><b>${G.gender==="m"?"ชาย":"หญิง"} ${G.age} ปี • ${G.job.name}</b></div><div class="kv"><span>ปลายทาง</span><b>${G.dest}</b></div><div class="kv"><span>${G.mode==="home"?"คนที่กำลังกลับมา":"คนที่รอ"}</span><b>${G.w.rel}${G.mode==="home"?(G.comps.some(c=>c.tr)?" • มาถึงแล้ว":" • ไม่ได้มาถึง"):""}</b></div>
+ <div class="kv"><span>เวลา</span><b>${hhmm(Math.min(720,Math.max(0,G.min)))}</b></div>${G.mode==="home"?`<div class="kv"><span>บ้าน</span><b>${G.flags.breached?"ถูกพังเข้ามา":"ไม่มีใครเข้าได้"}</b></div>`:G.mode==="hunt"?`<div class="kv"><span>ค่าหัว / เป้า</span><b>${G.bounty} บาท • ${G.targets} คน • ไว้ชีวิต ${G.flags.spared||0}</b></div>`:`<div class="kv"><span>ระยะที่เหลือ</span><b>${kmLeft()} จาก ${G.map.km} กม.</b></div>`}<div class="kv"><span>ฆ่า / ช่วย</span><b>${G.kills} / ${G.helped}</b></div><div class="kv"><span>ตอนจบ${G.mode==="hunt"?"โหมดออกล่า":G.mode==="home"?"โหมดเฝ้าบ้าน":""}ที่ปลดล็อก</span><b>${n}/${nT}</b></div></div>
  <div class="narr">07:00 ไซเรนหยุด รถเก็บขยะเริ่มออกวิ่ง คนออกมาฉีดน้ำล้างหน้าบ้าน ร้านกาแฟเปิดตามปกติ ไม่มีใครพูดถึงเมื่อคืน</div>
  <div class="panel center"><b>🩸 แต้มรอด +${e.pts||0}</b> <span class="small">(รวม ${META.pts})</span><div class="small">จากระยะที่ผ่านมา คนที่ช่วย ตอนจบใหม่ และการกลับถึงบ้าน</div></div><button class="btn primary" onclick="renderCreate()">▶ คืนถัดไป (ปีที่ ${META.year})</button><button class="btn" onclick="renderPerks('end')">🧬 ใช้แต้ม: สิ่งที่ติดตัวข้ามปี</button><button class="btn ghost" onclick="renderBook()">📖 สมุดสะสมตอนจบ</button></div>`;
  const s=$("#scrim"); if(s)s.style.boxShadow="none"; window.scrollTo(0,0);
@@ -2498,10 +2512,13 @@ function invDo(a,i){ const x=G.inv[i]; if(!x||G.over)return;
  renderInv();
 }
 function renderBook(){
- setTabUI("book"); const n=Object.keys(META.endings).length;
+ setTabUI("book"); const n=mainN();
  let h=`<div class="scr"><h3>📖 สมุดสะสม</h3><div class="panel"><div class="kv"><span>ตอนจบที่พบ</span><b>${n}/100</b></div><div class="kv"><span>ผ่านมาแล้ว</span><b>${META.runs} คืน</b></div><div class="kv"><span>ถึงที่พักแบบมีชีวิต</span><b>${META.arrived} คืน</b></div><div class="kv"><span>ช่วยคนไปแล้ว</span><b>${META.saved}</b></div></div>`;
  END_ORDER.forEach(cat=>{ const c=ENDINGS[cat]; h+=`<h3 style="margin-top:14px;font-size:15px">${c.cat} <span class="small">${c.list.filter((x,i)=>META.endings[cat+":"+i]).length}/10</span></h3><div class="end-grid">`;
   c.list.forEach((x,i)=>{ h+=META.endings[cat+":"+i]?`<div class="end-row"><b>${x[0]}</b><div class="small" style="margin-top:3px">${(typeof x[1]==="string"?x[1]:x[1].y).replace(/\{W\}/g,"คนที่รอ").replace(/\{ME\}/g,"เรา")}</div></div>`:`<div class="end-row locked">🔒 ???<div class="small" style="margin-top:3px">💡 ${(END_HINT[cat]||[])[i]||""}</div></div>`; }); h+="</div>"; });
+ [["hunt","🩸 โหมดออกล่า",huntOpen()],["home","🏠 โหมดเฝ้าบ้าน",homeOpen()]].forEach(([m,lab,open])=>{ h+=`<h3 style="margin-top:20px;font-size:16px">${lab} <span class="small">${modeN(m)}/30${open?"":" • 🔒 ยังไม่ปลดล็อกโหมด"}</span></h3>`;
+  MODE_ORDER[m].forEach(cat=>{ const c=ALL_END[cat]; h+=`<h3 style="margin-top:10px;font-size:15px">${c.cat} <span class="small">${c.list.filter((x,i)=>META.endings[cat+":"+i]).length}/10</span></h3><div class="end-grid">`;
+   c.list.forEach((x,i)=>{ h+=META.endings[cat+":"+i]?`<div class="end-row"><b>${x[0].replace(/\{W\}/g,"คนที่รอ")}</b><div class="small" style="margin-top:3px">${x[1].replace(/\{W\}/g,"คนที่รอ").replace(/\{ME\}/g,"เรา")}</div></div>`:`<div class="end-row locked">🔒 ???<div class="small" style="margin-top:3px">💡 ${MODE_HINT[cat][i]}</div></div>`; }); h+="</div>"; }); });
  h+=(!G||G.over?`<button class="btn primary" style="margin-top:16px" onclick="renderTitle()">← กลับ</button>`:"")+`<button class="btn ghost" style="margin-top:16px" id="rstBtn" onclick="confirmReset()">🗑️ ล้างข้อมูลทั้งหมด</button></div>`;
  side.innerHTML=h;
 }
@@ -2513,12 +2530,12 @@ document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ if(!G||G.ove
 //========================= TITLE / PREP =========================
 function renderTitle(){
  setNav(false); setTabUI("game"); clearTimer(); ambStop(); app.classList.remove("glitch"); const s=$("#scrim"); if(s)s.style.boxShadow="none"; UI.choices=[];
- const n=Object.keys(META.endings).length, sv=load(SKEY,null), can=sv&&sv.v===VER&&!sv.over;
+ const n=mainN(), nh=modeN("hunt"), nd=modeN("home"), sv=load(SKEY,null), can=sv&&sv.v===VER&&!sv.over;
  app.innerHTML=`<div class="scr title-wrap"><div class="logo">OVERTIME<small>คืนไร้กฎ</small></div>
  <div class="tag">ปีละหนึ่งคืน สิบสองชั่วโมง ไม่มีกฎหมาย<br>คืนนี้คุณเลิกงานไม่ทันไซเรน และมีคนรออยู่ที่บ้าน<br><b style="color:var(--red)">กลับไปให้ถึงก่อน 07:00</b></div>
- ${META.runs?`<div class="small">ปีที่ ${META.year} • ตอนจบ ${n}/100 • ผ่านมา ${META.runs} คืน</div>`:""}${META.scars.length?`<div class="small" style="color:var(--amber)">สิ่งที่ติดตัวมาจากปีก่อน: ${META.scars.join(", ")}</div>`:""}
+ ${META.runs?`<div class="small">ปีที่ ${META.year} • ตอนจบ ${n}/100${nh?` • 🩸 ${nh}/30`:""}${nd?` • 🏠 ${nd}/30`:""} • ผ่านมา ${META.runs} คืน</div>`:""}${META.scars.length?`<div class="small" style="color:var(--amber)">สิ่งที่ติดตัวมาจากปีก่อน: ${META.scars.join(", ")}</div>`:""}
  ${can?`<button class="btn primary" onclick="resumeRun()">⏯️ เล่นต่อ</button>`:""}<button class="btn ${can?"":"primary"}" onclick="renderCreate()">🩸 เริ่มคืนใหม่</button>
- ${n?`<button class="btn ghost" onclick="renderBook()">📖 สมุดสะสมตอนจบ (${n}/100)</button>`:""}
+ ${n||nh||nd?`<button class="btn ghost" onclick="renderBook()">📖 สมุดสะสมตอนจบ (${n+nh+nd}/160)</button>`:""}
  ${META.runs?`<button class="btn ghost" onclick="renderPerks()">🧬 สิ่งที่ติดตัวข้ามปี (🩸 ${META.pts})</button>`:""}
  <div class="howto"><b>เล่นยังไง</b><br>1. เดินสำรวจแต่ละที่ได้ตามใจ ค้นของ หารถ หาที่ซ่อน 🚶<br>2. เลือกเองว่าจะออกทางไหน ถนนใหญ่ ซอย ท่อ ดาดฟ้า 🧭<br>3. ไปถึง 🏠 ก่อนฟ้าสาง โดยหัวใจ ❤️ ไม่หมด</div>
  <button class="btn ghost sm" onclick="toggleSnd()">${SND.on?"🔊 เสียงและการสั่น: เปิด (ใส่หูฟังจะหลอนกว่า)":"🔇 เสียงและการสั่น: ปิด"}</button>
@@ -2526,10 +2543,14 @@ function renderTitle(){
 }
 function resumeRun(){ const s=load(SKEY,null); if(!s||s.v!==VER)return renderTitle(); G=s; ambStart(); G.job=JOBS.find(j=>j.id===G.job.id)||G.job; G._c=null; G.flags=G.flags||{}; flow(); }
 function renderCreate(){
- setNav(false); setTabUI("game"); G=null;
- app.innerHTML=`<div class="scr"><h2>คืนนี้คุณเป็นใคร</h2><div class="tag">เลือกได้แค่เพศ ที่เหลือโชคชะตาเลือกให้: อายุ อาชีพ นิสัย จุดที่ติดอยู่ ปลายทาง และคนที่รอ</div>
- <button class="btn primary" onclick="newRun('m',$('#nm').checked)">♂ ชาย</button><button class="btn primary" onclick="newRun('f',$('#nm').checked)">♀ หญิง</button>
- <div class="panel"><label style="display:flex;gap:8px;font-size:14px"><input type="checkbox" id="nm"><span><b>โหมดไร้ปรานี</b> — ไม่บอกโอกาสสำเร็จ ศัตรูแกร่งขึ้น</span></label></div><button class="btn ghost" onclick="renderTitle()">← กลับ</button></div>`;
+ setNav(false); setTabUI("game"); G=null; const L=META.legacy, ho=huntOpen(), hm=homeOpen();
+ app.innerHTML=`<div class="scr"><h2>คืนนี้คุณเป็นใคร</h2>
+ <div class="sec">🏃 กลับบ้าน</div><div class="tag">เลิกงานไม่ทันไซเรน ต้องกลับไปหาคนที่รอให้ถึงก่อน 07:00 เลือกได้แค่เพศ ที่เหลือโชคชะตาเลือกให้</div>
+ ${L?`<button class="btn primary" onclick="startLegacy()">🔁 คนเดิมจากปีที่แล้ว<div class="cost">${L.gender==="m"?"ชาย":"หญิง"} ${L.age} ปี • ${jobName(L.job)} • รอดมาแล้ว ${L.nights} คืน${L.scars.length?" • มีแผลติดตัว":""}${L.lost?" • ปีที่แล้วเสียคนที่รอไป":""}${(L.grudges||[]).length?" • มีคนแค้นตามมา":""}</div></button>`:""}
+ <div class="grid2"><button class="btn ${L?"":"primary"}" onclick="newRun('m',$('#nm').checked)">♂ ${L?"คนใหม่ ":""}ชาย</button><button class="btn ${L?"":"primary"}" onclick="newRun('f',$('#nm').checked)">♀ ${L?"คนใหม่ ":""}หญิง</button></div>
+ <div class="sec">🩸 ออกล่า</div>${ho?`<div class="tag">ปีนี้คุณไม่ได้หนี คุณเป็นคนออกไปล่าเอง</div><div class="grid2"><button class="btn" onclick="newHunt('m')">♂ ชาย</button><button class="btn" onclick="newHunt('f')">♀ หญิง</button></div>`:`<div class="small">🔒 ปลดล็อกเมื่อได้ฉากจบหมวด “กลายเป็นนักล่า” สักอัน</div>`}
+ <div class="sec">🏠 เฝ้าบ้าน</div>${hm?`<div class="tag">ปีนี้คุณกลับถึงบ้านทัน แต่คนที่คุณรอยังไม่กลับ</div><div class="grid2"><button class="btn" onclick="newHome('m')">♂ ชาย</button><button class="btn" onclick="newHome('f')">♀ หญิง</button></div>`:`<div class="small">🔒 ปลดล็อกเมื่อเล่นครบ 3 คืน</div>`}
+ <div class="panel" style="margin-top:12px"><label style="display:flex;gap:8px;font-size:14px"><input type="checkbox" id="nm"><span><b>โหมดไร้ปรานี</b> — ไม่บอกโอกาสสำเร็จ ศัตรูแกร่งขึ้น</span></label></div><button class="btn ghost" onclick="renderTitle()">← กลับ</button></div>`;
 }
 function renderPrep(){
  setNav(false); const n=node(), pl=place(n), own=G.job.home.includes(n.p);
@@ -2539,7 +2560,8 @@ function renderPrep(){
  const hint=t=>t.startsWith("veh:")?"ได้รถ ไปเร็วขึ้นมาก":t==="ชุดปฐมพยาบาล"?"รักษาแผลได้เยอะ":t==="ขวดน้ำ"||t==="อาหารกระป๋อง"?"กินแล้วหายเหนื่อย":t==="ไฟฉาย"?"ค้นของเจอง่ายขึ้น":t==="พาวเวอร์แบงก์"?"ชาร์จมือถือ":t==="fuel"?"เติมรถ":t==="ammo"?"กระสุนปืน":t[0]==="$"?"ใช้จ่ายหรือติดสินบน":WEAPONS[t]?"อาวุธ":"";
  const why=own?G.job.why:pick(["รถเที่ยวสุดท้ายไม่มา","โดนปล้นกลางทางจนไม่เหลืออะไร","รถเสียกลางทาง","ไปธุระแล้วกลับไม่ทัน","หลงทางตอนหาทางลัดกลับ"])+" เลยมาติดอยู่แถว"+pl.n;
  const wn=G.w.rel+(G.w.name?" “"+G.w.name+"”":"");
- const draw=()=>{ app.innerHTML=`<div class="scr"><div class="panel flash"><div class="scene-ic">${pl.ic}</div><div class="loc">18:52 • ${pl.n} ย่าน${G.routeFrom}</div>
+ const LG=G.legacy, legTxt=LG?`🔁 ปีที่ ${(LG.nights||1)+1} ของคนนี้ ${LG.lost?"ปีที่แล้วเสีย"+LG.w.rel+"ไป ปีนี้คนที่รอคือ"+G.w.rel:"ปีที่แล้วจบที่ “"+LG.lastEnd+"”"}${LG.scars.length?" • แผลติดตัว: "+LG.scars.map(x=>SCAR_TXT[x]).join(", "):""}${G.grudges.some(g=>g.deep)?" • มีคนจากปีก่อนที่ยังแค้นอยู่":""}`:"";
+ const draw=()=>{ app.innerHTML=`<div class="scr"><div class="panel flash"><div class="scene-ic">${pl.ic}</div>${legTxt?`<div class="small" style="color:var(--amber);margin-bottom:6px">${legTxt}</div>`:""}<div class="loc">18:52 • ${pl.n} ย่าน${G.routeFrom}</div>
   <div class="who">คุณคือ${G.gender==="m"?"ผู้ชาย":"ผู้หญิง"} ${G.age} ปี อาชีพ${G.job.name}</div>
   <div class="story">${why}\n\nอีก 8 นาทีไซเรนจะดัง แล้วกฎหมายทุกข้อจะหายไป 12 ชั่วโมง\n<b>${wn}</b> รออยู่คนเดียวที่${G.dest} ห่างออกไป <b>${G.map.km} กม.</b>\nตอนนี้คุณ${G.veh==="เดินเท้า"?"ไม่มีรถ ต้องเดิน":"มี"+G.veh}</div>
   <div class="small" style="color:var(--amber)">⭐ ${G.job.perk}</div><div class="small">🙂 นิสัย${G.trait.name}: ${G.trait.desc} • ${ageNote()}</div></div>
@@ -2550,8 +2572,533 @@ function renderPrep(){
   $("#goBtn").onclick=()=>startNight(chosen.map(i=>picks[i])); };
  draw(); window.__prep=()=>startNight(picks.slice(0,NP));
 }
-function startNight(toks){ toks.forEach(t=>giveLoot(t,true)); G.log=[]; G._newLog=0; G.min=0; siren(); ambStart(); setNav(true);
- show({ic:"🚨",flash:2,loc:"🚨 19:00",text:"ไซเรนดังยาวสามครั้ง เสียงประกาศจากลำโพงทุกเสา “ขณะนี้เวลาสิบเก้านาฬิกา กฎหมายทุกฉบับถูกระงับใช้เป็นเวลาสิบสองชั่วโมง ขอให้ทุกท่านโชคดี”\n\nแล้วทั้งเมืองก็เงียบ เงียบอยู่ประมาณสิบวินาที",narr:"กฎปีนี้: "+G.ruleText+(META.runs<=2?"\n\nเป้าหมาย: ไปให้ถึง 🏠 ก่อน 07:00 แต่ละจุดเลือกว่าจะไปทางไหนต่อ หรือทำอะไรที่นั่นก่อน ทุกอย่างใช้เวลา":""),k:"toast",log:false,delta:false,choices:[{l:"▶ ไป",primary:true,k:"cont",go:flow}]}); }
+function startNight(toks){ toks.forEach(t=>giveLoot(t,true)); updateChatBadge(); G.log=[]; G._newLog=0; G.min=0; siren(); ambStart(); setNav(true);
+ show({ic:"🚨",flash:2,loc:"🚨 19:00",text:"ไซเรนดังยาวสามครั้ง เสียงประกาศจากลำโพงทุกเสา “ขณะนี้เวลาสิบเก้านาฬิกา กฎหมายทุกฉบับถูกระงับใช้เป็นเวลาสิบสองชั่วโมง ขอให้ทุกท่านโชคดี”\n\nแล้วทั้งเมืองก็เงียบ เงียบอยู่ประมาณสิบวินาที",narr:"กฎปีนี้: "+G.ruleText+(G.mode==="hunt"?"\n\nเป้าหมาย: ล่าเป้าเก็บค่าหัว แล้วไปส่งยอดที่แคมป์ หรือกลับเข้าบ้านก่อน 07:00":G.mode==="home"?"\n\nเป้าหมาย: อยู่รอดในบ้านจนถึง 07:00 แล้วรอ"+G.w.n+"กลับมา":(META.runs<=2?"\n\nเป้าหมาย: ไปให้ถึง 🏠 ก่อน 07:00 แต่ละจุดเลือกว่าจะไปทางไหนต่อ หรือทำอะไรที่นั่นก่อน ทุกอย่างใช้เวลา":"")),k:"toast",log:false,delta:false,choices:[{l:"▶ ไป",primary:true,k:"cont",go:flow}]}); }
+//========================= โหมดเสริม: ฉากจบของโหมดออกล่า / เฝ้าบ้าน =========================
+// แยกจาก 100 ฉากจบหลัก: key ใน META.endings ใช้ชื่อหมวดใหม่ (hwin/hmercy/hfall/dhome/ddoor/dfall) ไม่ชนของเดิม
+// [ชื่อ, ข้อความ, รอดไหม]
+const MODE_END={
+ hunt:{
+  hwin:{cat:"🩸 ราชาคืนไร้กฎ",list:[
+   ["ราชาคืนไร้กฎ","ค่าหัวสูงสุดของปีขึ้นจอใหญ่กลางแคมป์ ทุกคนลุกขึ้นปรบมือ แก้วแชมเปญถูกยื่นมาให้ {ME}ยกขึ้นดื่ม แต่ยิ้มไม่ออก",true],
+   ["สมาชิกตลอดชีพ","สโมสรมอบบัตรสีทองให้ ปีหน้าไม่ต้องออกไปเปื้อนเลือดเอง แค่นั่งในเต็นท์ เลือกเป้าจากจอ แล้วกดปุ่ม",true],
+   ["ซองเงินบนโต๊ะกินข้าว","กลับถึงบ้านก่อนไซเรนเช้า วางซองเงินหนาเตอะไว้บนโต๊ะกินข้าว {W}มองซองนั้นนาน แล้วลุกไปล้างจานโดยไม่ถามสักคำ",true],
+   ["ห้องเก็บของที่ล็อกไว้","หน้ากากของทุกคนที่ล่าได้ ถูกแขวนเรียงในห้องเก็บของหลังบ้าน ล็อกกุญแจสองชั้น กุญแจห้อยคออยู่ตลอดเวลา",true],
+   ["ยอดวิวทะลุล้าน","ไลฟ์คืนนี้ถูกแชร์ไปทั่วประเทศ ทุกคนรู้จักฉายาใหม่ ไม่มีใครรู้หน้าจริง ยกเว้นคนที่อยู่ในคลิปซึ่งไม่มีใครเหลือ",true],
+   ["ไม่เหลือคู่แข่ง","ฆ่านักล่าคนอื่นเพื่อแย่งเป้ามาทั้งคืน จนสโมสรต้องเขียนกฎข้อใหม่ไว้สำหรับ{ME}โดยเฉพาะ",true],
+   ["เช้าวันทำงาน","07:00 ล้างมือ เปลี่ยนเสื้อ 08:30 นั่งประชุมเช้า ฝั่งตรงข้ามโต๊ะคือคนที่เมื่อคืนวิ่งหนี{ME}อยู่ในซอยเปลี่ยว เขาจำไม่ได้ หรือทำเป็นจำไม่ได้",true],
+   ["ปืนที่ใช้ล่า ใช้ปกป้อง","กลับถึงบ้านตอนพวกมันกำลังพังประตู ปืนกระบอกเดียวกับที่ใช้ล่าคนอื่นมาทั้งคืน ใช้ปกป้อง{W}ได้พอดี ไม่มีใครพูดถึงความย้อนแย้งนั้นเลย",true],
+   ["นักล่าเงียบ","ไม่มีใครเห็น ไม่มีกล้องจับ ไม่มีชื่อบนกระดาน แต่เช้านี้มีการ์ดสีครีมสอดใต้ประตูบ้าน “เราเห็นนะ แล้วเจอกันปีหน้า”",true],
+   ["ลูกศิษย์","เด็กหนุ่มคนหนึ่งตามดูอยู่ห่างๆ ทั้งคืน ตอนฟ้าสางเขาเดินมาหา ขอให้สอน ปีหน้าเขาจะออกล่าด้วยกัน",true]]},
+  hmercy:{cat:"🕊️ วางปืน",list:[
+   ["วางปืนกลางถนน","วางปืนลงกลางถนนแล้วเดินกลับบ้านมือเปล่า เป็นครั้งแรกในคืนนี้ที่หายใจได้เต็มปอด",true],
+   ["แขกในครัว","คนที่ควรจะเป็นเป้า ตอนนี้นั่งกินข้าวต้มอยู่ในครัวบ้าน{ME} {W}ตักข้าวให้เขาเพิ่มอีกทัพพี",true],
+   ["สายลับในสโมสร","เดินเข้าแคมป์ในฐานะนักล่า เดินออกมาพร้อมรายชื่อสมาชิกทั้งหมด ชื่อเหล่านั้นอยู่บนหน้าหนึ่งของข่าวเช้า",true],
+   ["เจอตัวเองในอีกชีวิต","เป้าคนสุดท้ายคือคนที่หน้าเหมือน{ME}เมื่อปีก่อนทุกอย่าง วิ่งหนี กลัว อยากกลับบ้าน ปล่อยเขาไป แล้วรู้สึกเหมือนได้ปล่อยตัวเองไปด้วย",true],
+   ["ปืนที่ยิงไล่","ทั้งคืนใช้ปืนยิงไล่คนที่ไล่ล่าคนอื่น ไม่ได้ยิงใครที่วิ่งหนีเลยสักคน ตอนเช้าคนทั้งซอยออกมายืนมองด้วยสายตาที่อธิบายไม่ถูก",true],
+   ["เผาแคมป์","จุดไฟที่เต็นท์สโมสร ภาพบนจอทุกจอดับพร้อมกัน เสียงกรีดร้องของคนรวยฟังไม่ต่างจากเสียงของคนจน",true],
+   ["ร้องไห้กับ{W}","กลับบ้าน วางปืน แล้วร้องไห้ไม่หยุดจนเช้า ไม่ได้อธิบายอะไรเลย {W}ไม่ถาม แค่นั่งกอดไว้",true],
+   ["มือที่ยังสะอาด","ออกไปทั้งคืนแต่ไม่ได้ฆ่าใคร ไม่รู้ว่าเพราะกล้าหรือเพราะขลาด แต่เช้านี้มองกระจกได้",true],
+   ["ไถ่ชีวิต","ใช้เงินค่าหัวทั้งหมดที่หามาได้ไถ่เชลยออกมาจากตลาดมืด เงินหมดตัว แต่มีคนแปลกหน้าห้าคนจำหน้า{ME}ไปทั้งชีวิต",true],
+   ["กุญแจในคลอง","กลับถึงบ้าน เก็บปืนใส่กล่อง ล็อก แล้วเดินไปโยนกุญแจลงคลองหลังบ้าน ปีหน้าจะไม่ออกไปอีกแล้ว",true]]},
+  hfall:{cat:"💀 นักล่ากลายเป็นเหยื่อ",list:[
+   ["เหยื่อที่ไม่ยอมตาย","เป้าที่ดูอ่อนแอที่สุด ลุกขึ้นมาพร้อมเศษกระจกในมือ สิ่งสุดท้ายที่เห็นคือแววตาที่ไม่กลัวอีกแล้ว",false],
+   ["นักล่ากินนักล่า","นักล่าอีกคนยิงมาจากหลังคา สโมสรได้ค่าหัวสองคนในคืนเดียว และชื่อ{ME}ถูกขีดฆ่าบนกระดาน",false],
+   ["หน่วยชุดดำ","หน่วยชุดดำไม่สนว่าใครล่าใคร เห็นอาวุธในมือก็ยิง ไม่มีคำเตือน ไม่มีคำถาม",false],
+   ["บ้านที่ทิ้งไว้","กลับบ้านมาเจอประตูพัง ระหว่างที่ออกไปล่าคนอื่น มีคนมาล่าคนในบ้าน",true],
+   ["เหยื่อล่อ","เด็กที่ร้องไห้กลางถนนเป็นเหยื่อล่อ คนที่รออยู่ในเงามืดมีเยอะกว่าที่คิด และพวกมันก็เป็นนักล่าเหมือนกัน",false],
+   ["ชื่อในแคตตาล็อกปีหน้า","สโมสรไม่ชอบคนที่ปล่อยเป้า เช้านี้มีอีเมลเข้ามา แนบรูป{ME}ที่ถ่ายจากไกลๆ หัวข้อว่า “เป้าแนะนำประจำปีหน้า”",true],
+   ["หน้าที่เคยเห็น","ลงมือไปแล้วถึงเห็นหน้าชัดๆ เป็นคนที่เคยนั่งกินข้าวด้วยกันตอนเที่ยง ทุกวัน",true],
+   ["แค้นนี้ต้องชำระ","คนที่เคยแค้น{ME}รอคืนนี้มาทั้งปี และเขาไม่ได้มาคนเดียว",false],
+   ["นัดสุดท้าย","กระสุนนัดสุดท้ายหมดไปพร้อมความมืด เป้าที่รอดมาได้หันกลับมา คราวนี้เป็นฝ่ายเดินเข้ามาช้าๆ",false],
+   ["ไม่มีใครรอแล้ว","กลับถึงบ้านตอนเช้า {W}ไม่อยู่แล้ว มีโน้ตแผ่นเดียวบนโต๊ะ “อย่าตามมา”",true]]},
+ },
+ home:{
+  dhome:{cat:"🌅 เช้าที่บ้าน",list:[
+   ["เช้าแรกหลังประตู","{W}มาถึงทัน ทั้งสองคนนั่งพิงตู้ที่ดันประตูไว้ ไม่พูดอะไรกันเลยจนไซเรนเช้าดัง",true],
+   ["บ้านที่ไม่มีใครเข้าได้","ทุกประตู ทุกหน้าต่างถูกขวางไว้จนพวกมันถอดใจ บ้านทั้งซอยโดนหมด ยกเว้นหลังนี้",true],
+   ["แบ่งข้าวกับคนแปลกหน้า","คนที่เปิดประตูรับเข้ามาตอนดึก เช้านี้ช่วยล้างจาน แล้วบอกชื่อจริงเป็นครั้งแรก",true],
+   ["รอจนเช้าคนเดียว","{W}ไม่มา ไม่ตอบ แต่บ้านยังอยู่ เช้านี้ต้องออกไปตามหา ไล่ถามทีละโรงพยาบาล",true],
+   ["เคาะสามที","เคาะสามทีตามที่นัด ถามรหัส รหัสถูก เปิดประตูแล้วกอดกันตรงนั้น ทั้งที่ประตูยังไม่ได้ปิด",true],
+   ["บนหลังคา","ปีนขึ้นไปซ่อนบนหลังคา นอนราบกับกระเบื้องดูไฟไหม้ทั่วเมืองจนฟ้าสาง",true],
+   ["สงครามในครัว","สู้กับพวกที่บุกเข้ามาในครัวด้วยของที่มีในบ้าน และชนะ ครัวไม่เหลือสภาพเดิม แต่คนยังอยู่ครบ",true],
+   ["เพื่อนบ้าน","ออกไปช่วยเพื่อนบ้านไว้ตอนเที่ยงคืน ตอนตีสี่เขากลับมาช่วยคืน พร้อมพวกอีกสามคน",true],
+   ["มาส่งถึงหน้าประตู","{W}มาถึงพร้อมคนแปลกหน้าที่ช่วยกันมาตลอดทาง บ้านแคบลงทันที แต่อุ่นขึ้นเยอะ",true],
+   ["ฟังเสียงทั้งคืน","ไม่ได้นอนเลย ฟังทุกเสียง นับทุกนาที เช้านี้มือยังสั่น แต่ยังอยู่",true]]},
+  ddoor:{cat:"🚪 คนที่เคาะประตู",list:[
+   ["ไม่ใช่ตัวจริง","คนที่เคาะประตูพูดเหมือน{W}ทุกอย่าง แต่บอกรหัสผิด ไม่ได้เปิด ตอนเช้าเจอมือถือของ{W}วางทิ้งไว้บนพรมหน้าบ้าน",true],
+   ["เปิดผิดคน","เปิดประตูให้เสียงที่คุ้นเคย ข้างหลังเสียงนั้นมีคนอีกห้าคน",false],
+   ["ไม่กล้าเปิด","ได้ยินเสียง{W}เรียกอยู่หน้าบ้านนานจนเงียบไป ไม่กล้าเปิด และจะไม่มีวันรู้ว่าเป็นตัวจริงหรือเปล่า",true],
+   ["คนที่ขอหลบ","เปิดให้คนแปลกหน้าที่มาขอหลบ เขาช่วยดันตู้ทั้งคืน แล้วจากไปตอนเช้าโดยไม่บอกชื่อ",true],
+   ["ศัตรูในห้องนั่งเล่น","คนที่เคยแค้นกันมาขอหลบ เปิดให้ ทั้งคืนไม่มีใครพูดกันสักคำ แต่ก็ไม่มีใครลงมือ",true],
+   ["ร่วมมือกับคนที่เกลียด","สองคนที่เกลียดกันที่สุด ช่วยกันยันประตูหลังจนเช้า ตอนแยกกันเขาพยักหน้าให้ครั้งเดียว",true],
+   ["แลกกับประตูบ้าน","พวกมันจับ{W}มายืนหน้าบ้าน ให้เลือกระหว่างประตูกับคน เปิดประตูแลก สองคนรอด แต่บ้านไม่เหลืออะไรเลย",true],
+   ["ส่งยาผ่านช่องจดหมาย","คนเจ็บมาเคาะขอยา ส่งยาให้ผ่านช่องจดหมาย ไม่ได้เปิดประตู ไม่รู้ว่าเขารอดไหม แต่ตอนเช้าที่หน้าบ้านมีดอกไม้วางอยู่",true],
+   ["เสียงในสายบอกให้เปิด","โทรศัพท์บอกให้เปิดประตูเดี๋ยวนี้ เสียงนั้นเหมือน{W}ทุกอย่าง แต่ไม่ใช่",false],
+   ["บ้านของทุกคน","บ้านกลายเป็นที่หลบภัยของคนทั้งซอย เช้านี้มีรองเท้าสิบกว่าคู่วางเรียงหน้าประตู",true]]},
+  dfall:{cat:"💀 บ้านแตก",list:[
+   ["พวกมันเข้ามาทางครัว","ประตูครัวพังลงตอนตีสาม เสียงจานแตก แล้วเสียงฝีเท้าก็ขึ้นบันไดมา",false],
+   ["ที่ซ่อนใต้หลังคา","ซ่อนดีแล้ว เงียบแล้ว จนได้ยินเสียงบันไดพับถูกดึงลงมาช้าๆ",false],
+   ["ไฟจากบ้านข้างๆ","ไฟลามข้ามรั้วมาตอนเผลอ ควันเต็มบ้านเร็วกว่าที่คิด",false],
+   ["ไฟดวงเดียวที่ลืมปิด","ไฟห้องน้ำดวงเดียวที่ลืมปิด มองเห็นได้จากหัวถนน",false],
+   ["{W}มาไม่ถึง","รอดถึงเช้า บ้านยังอยู่ แต่ข่าวเช้ามีชื่อ{W}อยู่ในรายชื่อ",true],
+   ["ประตูหลังพัง","ประตูหลังบานเก่าที่ตั้งใจจะเปลี่ยนมาสามปี พังลงในการถีบครั้งที่สอง",false],
+   ["คนที่เปิดประตูให้","คนที่ช่วยไว้เมื่อหัวค่ำ เปิดประตูหลังให้พวกของเขาตอนตีสาม",false],
+   ["หลับไปแค่แป๊บเดียว","บอกตัวเองว่าแค่พักสายตา ตื่นมาอีกทีมีคนยืนอยู่ปลายเตียง",false],
+   ["บ้านที่ถูกเลือก","บ้านถูกพ่นเครื่องหมายไว้ตั้งแต่หัวค่ำ พวกมันรู้ว่าข้างในมีกี่คน",false],
+   ["เหลือแค่บ้าน","บ้านยังอยู่ครบ แต่ไม่มีใครกลับมา และไม่มีใครให้รออีกแล้ว",true]]},
+ },
+};
+const ALL_END=Object.assign({},ENDINGS,MODE_END.hunt,MODE_END.home);
+const MODE_ORDER={hunt:["hwin","hmercy","hfall"],home:["dhome","ddoor","dfall"]};
+const MODE_HINT={
+ hwin:["ส่งค่าหัวที่แคมป์สโมสรให้ได้สูงมาก","ส่งค่าหัวที่แคมป์สโมสรให้ได้เยอะ","กลับบ้านก่อนเช้าพร้อมค่าหัวพอสมควร","ล่าหลายคนแล้วกลับบ้าน","ไลฟ์ตอนลงมือหลายครั้ง แล้วไปส่งยอดที่สโมสร","ฆ่านักล่าคนอื่นที่แย่งเป้า","รอดถึงเช้าโดยไม่ได้กลับบ้าน","กลับบ้านทันตอนบ้านถูกบุก และมีปืน","ล่าเงียบๆ ไม่ไลฟ์ แล้วไปส่งยอด","ปล่อยให้เด็กหนุ่มตามดู แล้วล่าจนเช้า"],
+ hmercy:["ไม่ฆ่าใคร ปล่อยเป้า แล้วจบคืน","พาเป้าไปที่ปลอดภัย แล้วกลับบ้าน","มีหลักฐาน แล้วเข้าแคมป์สโมสร","ไว้ชีวิตคนที่หน้าเหมือนตัวเองปีก่อน","ช่วยคนไว้ 3 คนขึ้นไปโดยไม่ฆ่าเป้า","จุดไฟที่แคมป์สโมสร","กลับบ้านตอนสติใกล้ขาด โดยไม่ฆ่าใคร","ไม่ฆ่าใครเลยทั้งคืน","ใช้เงินไถ่เชลยในตลาดมืด","ไม่ฆ่าใคร แล้วกลับบ้านก่อนเช้า"],
+ hfall:["ตายเพราะเป้าสู้กลับ","ตายจากนักล่าคนอื่น","ตายจากหน่วยชุดดำ","กลับบ้านมาเจอบ้านถูกบุก","ตายเพราะเหยื่อล่อ","ปล่อยเป้าหลายคน แล้วจบคืน","ลงมือกับคนรู้จัก","ตายจากคนที่แค้นเรา","กระสุนหมดตอนใกล้เช้า แล้วตาย","กลับบ้าน แต่คนในบ้านไม่อยู่แล้ว"],
+ dhome:["ให้คนที่รอเข้าบ้านมาได้","ขวางทุกทางเข้าจนไม่มีใครเข้าได้","เปิดรับคนแปลกหน้าที่ดี แล้วรอดถึงเช้า","คนที่รอไม่มาถึง แต่ไม่รู้ชะตา","ถามรหัสก่อนเปิดให้คนที่รอ","ปีนหนีขึ้นหลังคา","ชนะคนที่บุกเข้ามาในบ้าน","ออกไปช่วยเพื่อนบ้าน","คนที่รอพาคนแปลกหน้ามาด้วย","รอดถึงเช้าแบบไม่มีอะไรพิเศษ"],
+ ddoor:["ไม่เปิดให้คนที่บอกรหัสผิด","เปิดประตูให้ตัวปลอม","ไม่เปิดให้คนที่รอตัวจริง","เปิดให้คนแปลกหน้าที่ดี","ให้ศัตรูเก่าหลบในบ้าน","สู้ร่วมกับศัตรูเก่า","เปิดประตูแลกกับคนที่รอ","ส่งยาให้คนเจ็บโดยไม่เปิดประตู","เชื่อเสียงในโทรศัพท์แล้วเปิดประตู","เปิดรับคนเข้าบ้านหลายคน"],
+ dfall:["พวกมันพังเข้ามาทางครัว","ถูกเจอในที่ซ่อนใต้หลังคา","ไฟลามมาจากบ้านข้างๆ","ลืมปิดไฟแล้วโดนบุก","รอดถึงเช้า แต่คนที่รอตายระหว่างทาง","ประตูหลังพัง","คนที่รับเข้าบ้านหักหลัง","หมดแรงแล้วโดนบุก","บ้านถูกหมายหัวตั้งแต่หัวค่ำ","รอดคนเดียว ไม่มีใครกลับมา"],
+};
+const mainN=()=>Object.keys(META.endings).filter(k=>ENDINGS[k.split(":")[0]]).length;
+const modeN=m=>Object.keys(META.endings).filter(k=>(MODE_END[m]||{})[k.split(":")[0]]).length;
+const huntOpen=()=>Object.keys(META.endings).some(k=>k.startsWith("hunter:"));
+const homeOpen=()=>META.runs>=3;
+function pickUnseen(cat,arr){ arr=arr.filter(x=>x!=null&&x>=0); if(!arr.length) return null; const un=arr.filter(i=>!META.endings[cat+":"+i]); return [cat,pick(un.length&&chance(.75)?un:arr)]; }
+
+//========================= คนเดิมปีถัดไป =========================
+const jobName=id=>{ const j=JOBS.find(x=>x.id===id); return j?j.name:"คนธรรมดา"; };
+function saveLegacy(){
+ const e=G.ending, f=G.flags;
+ if(G.mode&&G.mode!=="run") return;
+ if(!e.alive){ META.legacy=null; return; }
+ const L=G.legacy||{nights:0,kills:0,scars:[]}, scars=(L.scars||[]).slice();
+ if(f.lostKidney&&!scars.includes("kidney")) scars.push("kidney");
+ if(G.legHurt&&!scars.includes("leg")) scars.push("leg");
+ if(G.sanity<25&&!scars.includes("mind")) scars.push("mind");
+ const gr=(G.grudges||[]).filter(g=>!g.done).map(g=>({who:g.who,deep:!!g.deep}));
+ if(f.abandoned) gr.push({who:`${f.abandoned} คนที่ถูกทิ้งไว้ให้ตายเมื่อปีก่อน`,deep:true});
+ if(f.soldFriend) gr.push({who:"คนที่เคยถูกขายให้นักล่าเมื่อปีก่อน",deep:true});
+ META.legacy={gender:G.gender,age:G.age+1,job:G.job.id,trait:G.trait.id,w:G.w,dest:G.dest,nights:(L.nights||0)+1,kills:(L.kills||0)+G.kills,
+  scars,grudges:gr.slice(-3),lost:!G.sisterSafe,arrived:!!e.arrived,lastEnd:e.title};
+}
+function startLegacy(){ const L=META.legacy; if(!L) return renderCreate(); newRun(L.gender,$('#nm')&&$('#nm').checked,{legacy:L}); }
+const SCAR_TXT={kidney:"ไตเหลือข้างเดียว เลือดน้อยลง",leg:"ขาเจ็บเก่า เดินช้าลง",mind:"ฝันร้ายทุกคืน สติเปราะ"};
+const LEG_OPEN={y:"ปีนี้{you}ต้องกลับมาให้ได้อีกนะ เหมือนปีที่แล้ว",e:"ปีที่แล้ว{i}นั่งรอจนเช้า ปีนี้{i}ก็จะรอ",p:"ปีที่แล้วมึงรอดมาได้ ปีนี้ก็ต้องรอด อย่าให้กูเสียฟอร์ม"};
+
+//========================= ความแค้น: ศัตรู / ขอความช่วยเหลือ / จำใจร่วมมือ =========================
+function evGrudge(){
+ const g=G.grudges.find(x=>!x.shown); g.shown=true; G._grudge=g;
+ const r=Math.random(), kind=g.deep?(r<.6?"foe":r<.8?"beg":"ally"):(r<.42?"foe":r<.72?"beg":"ally");
+ if(kind==="beg") return grudgeBeg(g); if(kind==="ally") return grudgeAlly(g);
+ const pt=pOf(g.deep?.28:.4,"talk"), foe=()=>{ G._grudgeFight=true; startCombat("worker",{name:"คนที่รอคืนนี้มาทั้งปี",count:g.deep?2:1,hpMul:1.5,desc:g.deep?"เขาไม่ได้มาคนเดียว พามาอีกคน":"มือถือมีดทำครัวที่ลับมาอย่างดี",onWin:"grudgeWin"}); };
+ show({loc:"👁️ หน้าคุ้นๆ",text:`มีคนยืนขวางทาง จ้องหน้า${me()}นิ่ง “จำกูได้ไหม” เขาคือ${g.who} “กูรอคืนนี้มาทั้งปี กูนับวัน”`,flash:true,k:"card",choices:[
+  {l:"⚔️ สู้",k:"fight",go:foe},
+  {l:"🙇 ขอโทษจากใจ",p:pt,k:"card",go:()=>chance(pt)?(g.done=true,G.sanity=clamp(G.sanity+5,0,100),G.karma+=2,toast("เขาร้องไห้","เขายืนสั่นอยู่นาน แล้วอาวุธก็หลุดจากมือ “กูแค่อยากให้มึงรู้ว่ากูเจ็บ” เขาเดินจากไปโดยไม่หันกลับมา")):toast("สายไปแล้ว","“มึงมีเวลาขอโทษทั้งปี”",foe)},
+  G.money>=600?{l:"💰 ยื่นเงินชดใช้ 600",p:.55,k:"card",go:()=>{ G.money-=600; if(chance(.55)){ g.done=true; return toast("รับเงิน","เขาขยำเงินไว้ในมือ “ไม่พอหรอก แต่คืนนี้กูเหนื่อยแล้ว”"); } toast("ดูถูกกัน","“มึงคิดว่ากูขายได้เหรอ”",foe); }}:null,
+  {l:"🏃 หนี",p:pOf(.5,"run"),k:"card",go:()=>chance(pOf(.5,"run"))?(g.deep=true,G.stamina=clamp(G.stamina-15,0,100),toast("หนีพ้น","เขาตะโกนตามหลัง ว่ารู้ว่า"+me()+"พักอยู่ที่ไหน",()=>{G.threat=clamp(G.threat+10,0,100);flow();})):foe()}]});
+}
+function grudgeWin(){ const g=G._grudge; if(g) g.done=true; G._grudgeFight=false; toast("จบเรื่องค้าง",pick(["เขานอนนิ่งอยู่บนพื้น มือยังกำรูปถ่ายเก่าไว้ใบหนึ่ง เป็นรูปที่มี"+me()+"อยู่ในนั้นด้วย","“กูแค่อยากให้มึงจำ” เป็นคำสุดท้ายที่เขาพูด"])); }
+function grudgeBeg(g){
+ const kit=G.inv.includes("ชุดปฐมพยาบาล");
+ show({loc:"👁️ คนที่ขอความช่วยเหลือ",text:`มีคนนั่งพิงเสาไฟ ขาข้างหนึ่งเปื้อนเลือดจนกางเกงดำ เขาเงยหน้าขึ้นมาเห็น${me()} แล้วหัวเราะออกมาทั้งที่เจ็บ เขาคือ${g.who}\n\n“โลกกลมดีว่ะ” เขาพูด “กูรู้ว่ากูไม่มีสิทธิ์ขอ แต่ช่วยกูหน่อย”`,k:"card",choices:[
+  {l:kit?"🩹 ใช้ชุดปฐมพยาบาลทำแผลให้":"🩹 ฉีกเสื้อพันแผลให้",k:"card",go:()=>{ if(kit) G.inv.splice(G.inv.indexOf("ชุดปฐมพยาบาล"),1); passTime(kit?10:25); g.done=true; G.karma+=4; G.helped++; G.sanity=clamp(G.sanity+6,0,100);
+   if(G.comps.length<3&&chance(.55)){ G.comps.push({name:"คนที่เคยแค้นกัน",intro:"",motive:"จริงใจ",loyalty:80,hp:55,sk:"force"}); return toast("เดินไปด้วยกัน","เขามองแผลที่ถูกพันไว้ แล้วมองหน้า "+me()+"นาน “ทางไปบ้านมึงผ่านย่านกูพอดี ไปด้วยกัน กูติดหนี้มึงแล้ว”"); }
+   toast("หายกันนะ","เขาพยักหน้าครั้งเดียว “หายกัน” แล้วกะเผลกหายไปในความมืด"); }},
+  {l:"🚶 เดินผ่านไป",k:"card",go:()=>{ g.deep=true; G.sanity=clamp(G.sanity-5,0,100); toast("เดินผ่าน","เสียงเขาตะโกนไล่หลังมาว่า “กูจะจำไว้” เสียงนั้นแหบลงเรื่อยๆ"); }},
+  {l:G.mode==="hunt"?"🔫 นับเป็นค่าหัว":"🗡️ จบเรื่องตรงนี้",k:"card",go:()=>{ g.done=true; G.kills++; G.karma-=6; killSanity(); if(G.mode==="hunt"){ G.bounty+=200; G.targets++; } toast("จบแล้ว","เขาไม่ได้ขัดขืน ไม่ได้ร้อง แค่หลับตาเหมือนรอมานานแล้ว"); }}]});
+}
+function grudgeAlly(g){
+ const pt=pOf(.42,"talk");
+ const fightTogether=()=>{ G.comps.push({name:"ศัตรูเก่า",intro:"",motive:"จริงใจ",loyalty:50,hp:70,sk:"force",temp:true}); startCombat("mask",{count:3,name:"พวกที่ล้อมตรอก",desc:"ไฟฉายสามดวงส่องเข้ามาจากสองฝั่ง",onWin:"allyWin"}); };
+ show({loc:"⚔️ ติดอยู่ด้วยกัน",flash:true,text:`เสียงฝีเท้าหลายคู่ล้อมเข้ามาจากสองฝั่งตรอก ในตรอกเดียวกันมีอีกคนติดอยู่ด้วย พอหันมาเห็นหน้ากันชัดๆ ทั้งสองคนชะงัก เขาคือ${g.who}\n\n“กูเกลียดมึง” เขากระซิบ “แต่ถ้าไม่ช่วยกันคืนนี้ ตายทั้งคู่”`,k:"card",timer:window.__BOT?0:10,onTimeout:fightTogether,choices:[
+  {l:"🤝 หันหลังชนกัน สู้ไปด้วยกัน",k:"fight",go:fightTogether},
+  {l:"🏃 ผลักเขาออกไปล่อ แล้ววิ่ง",k:"betray",go:()=>{ g.deep=true; G.flags.abandoned=G.flags.abandoned||"คนที่เคยแค้นกัน"; G.karma-=6; G.sanity=clamp(G.sanity+sanFx(-10),0,100); toast("ทิ้งเขาไว้","ได้ยินเสียงเขาสาปแช่งชื่อ"+me()+"ปนกับเสียงฟาด ไม่หันกลับไปมอง"); }},
+  {l:"🗣️ ต่อรองกับแก๊ง: เอาตัวเขาไป ปล่อยเราไป",p:pt,k:"card",go:()=>{ if(chance(pt)){ g.done=true; G.karma-=8; G.flags.soldFriend=true; return toast("ตกลง","พวกมันหัวเราะชอบใจ ลากเขาไปทางหนึ่ง แล้วโบกมือให้"+me()+"ไปอีกทาง"); } toast("มันไม่ซื้อ","“เอาทั้งคู่ดีกว่า”",()=>startCombat("mask",{count:3,name:"พวกที่ล้อมตรอก"})); }}]});
+}
+function allyWin(){ const g=G._grudge; const c=G.comps.find(x=>x.temp); G.comps=G.comps.filter(x=>!x.temp);
+ if(chance(.22)){ const m=Math.min(G.money,ri(200,800)); G.money-=m; if(g) g.deep=true; return toast("ยังเกลียดกันเหมือนเดิม","พอทุกอย่างเงียบลง เขากระชากกระเป๋าเงินไปแล้ววิ่ง “เมื่อกี้แค่จำเป็น”"+(m?` เงินหายไป ${m} บาท`:"")); }
+ if(g) g.done=true; G.flags.grudgeAlly=true;
+ if(c&&G.comps.length<3&&chance(.4)){ delete c.temp; c.name="คนที่เคยแค้นกัน"; c.loyalty=85; G.comps.push(c); return toast("หายกัน","เขาเช็ดเลือดออกจากปาก “ไปด้วยกันอีกหน่อยก็ได้ กูไม่ได้ชอบมึงนะ”"); }
+ toast("หายกัน","เขายื่นมือมา จับมือกันครั้งเดียว แน่น แล้วแยกทางกันไปคนละทิศ"); }
+
+//========================= โหมดออกล่า =========================
+function newHunt(gender){ newRun(gender,$('#nm')&&$('#nm').checked,{mode:"hunt"}); }
+const HUNT_CHAT={
+ y:["{you}ไปไหน ไซเรนดังแล้ว ทำไมไม่อยู่บ้าน","{i}เห็น{you}หยิบกล่องในห้องเก็บของออกไป ในกล่องนั้นมีอะไร","{you}ไม่ได้ออกไปทำแบบที่เห็นในข่าวใช่ไหม","ข้างนอกมีคนตะโกน {i}กลัว {you}กลับมาได้ไหม","{i}ไม่บอกใครหรอก แต่{you}สัญญานะว่าจะกลับมาเป็นคนเดิม","มีผู้ชายใส่ชุดล่าสัตว์มาเคาะประตูถามหา{you} ทำไมเขารู้จัก{you}","{i}เปิดไลฟ์ดู มีคนหน้าเหมือน{you}อยู่ในจอ ไม่ใช่ใช่ไหม"],
+ e:["{you} {i}เห็นปืนในกระเป๋าตั้งแต่เย็นแล้ว {i}ไม่ได้พูดอะไร","กลับบ้านเถอะ{you} เงินเท่าไหร่ก็ไม่คุ้ม","{i}ไม่ได้เลี้ยง{you}มาให้เป็นแบบนี้","ถ้า{you}ทำอะไรลงไปแล้ว ก็กลับมาเถอะ {i}ยังรออยู่","บ้านข้างๆ โดนแล้ว {i}อยู่คนเดียวนะ{you}","{i}ไม่ถามแล้วว่าไปไหน ขอแค่กลับมา","{i}ฝันว่า{you}ยังเป็นเด็ก วิ่งเล่นอยู่หน้าบ้าน"],
+ p:["มึงไปไหนวะ อย่าบอกนะว่าไปจริง","กูเห็นมึงในไลฟ์สโมสร มึงบ้าไปแล้วเหรอ","กูไม่แจ้งใครหรอก แต่กูไม่รู้จะมองหน้ามึงยังไง","ห้องกูมีคนมาเคาะ มึงอยู่ไหน","ถ้ามึงอยากเลิก มาหากู กูเปิดประตูให้","ไอ้สัส ตอบกูหน่อย","จำได้ปะ เราเคยด่าคนที่ออกล่าด้วยกัน"],
+};
+// เป้าที่เจอระหว่างล่า: n ชื่อ, t ฉาก, k ศัตรูตอนสู้, c จำนวน, hp, b ค่าหัว, fb โอกาสสู้กลับ, gun, plea คำขอชีวิต
+const TARGETS=[
+ {n:"พนักงานออฟฟิศที่วิ่งหนี",t:"คนใส่เชิ้ตทำงานวิ่งกะเผลก กระเป๋าโน้ตบุ๊กยังสะพายอยู่ บัตรพนักงานห้อยคอแกว่งไปมา เขาคือคนแบบเดียวกับที่เคยหนีกลับบ้านทุกปี",k:"worker",c:1,hp:.7,b:250,fb:.2,plea:"“ผมมีคนรออยู่ที่บ้าน ขอร้อง”"},
+ {n:"ไรเดอร์ในตู้โทรศัพท์",t:"ไรเดอร์คนหนึ่งขดตัวอยู่ในตู้โทรศัพท์เก่า กล่องส่งอาหารยังติดหลัง มอไซค์ล้มอยู่ข้างทาง ยางแบน",k:"robber",c:1,hp:.8,b:250,fb:.35,plea:"“ผมแค่ส่งของรอบสุดท้าย ผมไม่ทันจริงๆ”"},
+ {n:"คู่รักในห้างร้าง",t:"เสียงกระซิบดังมาจากหลังเคาน์เตอร์ร้านทอง หนุ่มสาวคู่หนึ่งนั่งกอดกัน ผู้ชายถือขาเก้าอี้เป็นอาวุธ",k:"worker",c:2,hp:.8,b:450,fb:.45,plea:"“เอาผมไปคนเดียว ปล่อยเธอไป”"},
+ {n:"ชายเฝ้าบ้านกับลูกซอง",t:"บ้านไม้สองชั้นหลังเดียวในซอยที่ยังเปิดไฟ มีผู้ชายวัยกลางคนนั่งบนเก้าอี้หน้าบ้าน ลูกซองพาดตัก “กูเห็นมึงแล้ว”",k:"robber",c:1,hp:1.4,b:650,fb:.95,gun:true,plea:"“ไปที่อื่นเถอะ ข้างในมีแค่เมียกับแม่กู”"},
+ {n:"นักท่องเที่ยวที่หลงทาง",t:"ฝรั่งสองคนใส่เสื้อลายดอก ยืนดูแผนที่ในมือถือกลางสี่แยก คนหนึ่งร้องไห้ อีกคนถือปืนที่เพิ่งซื้อมาแบบไม่รู้จะจับยังไง",k:"tourist",c:2,hp:.8,b:550,fb:.6,gun:true,plea:"“Please... we just want to go back to the hotel”"},
+ {n:"อดีตตำรวจที่ไม่ยอมแพ้",t:"ชายผมขาวในเสื้อตำรวจตัวเก่า ยืนตรงกลางถนนเหมือนรออยู่ “มาสิ ปีที่แล้วกูก็รอดมาได้”",k:"robber",c:1,hp:1.6,b:800,fb:.9,gun:true,plea:"“กูเคยจับคนแบบมึงมาทั้งชีวิต”"},
+ {n:"ป้าที่ไม่ยอมปิดร้าน",t:"ร้านโชห่วยห้องแถวยังเปิดไฟนีออน ป้าคนขายนั่งอยู่หลังตู้แช่ ถือไม้กวาดด้ามยาว “ร้านป้า ป้าไม่ไปไหน”",k:"worker",c:1,hp:.7,b:150,fb:.5,plea:"“ป้าแก่แล้ว แต่ป้ายังไม่อยากตาย”"},
+ {n:"นักศึกษาสามคนที่ไลฟ์หนี",t:"แสงจอมือถือสามดวงในความมืด นักศึกษาสามคนกำลังไลฟ์ระหว่างหนี ยอดคนดูหลักหมื่น “ทุกคนครับ มีคนเดินตามมา”",k:"worker",c:3,hp:.7,b:600,fb:.5,plea:"“คนดูอยู่เป็นหมื่นนะ พี่จะทำจริงเหรอ”"},
+ {n:"หมอที่กำลังทำแผลข้างทาง",t:"ผู้หญิงในชุดหมอคุกเข่าอยู่ข้างคนเจ็บ ใช้ไฟฉายคาบไว้ในปาก กำลังเย็บแผลให้คนแปลกหน้า",k:"worker",c:1,hp:.6,b:300,fb:.1,plea:"“ให้ฉันเย็บแผลนี้ให้เสร็จก่อนได้ไหม”",doc:true},
+ {n:"ครอบครัวในบ้านไม้",t:"บ้านไม้ชั้นเดียวปิดไฟมืดสนิท แต่ได้ยินเสียงเด็กไอ แล้วเสียงผู้ใหญ่จุ๊ปากให้เงียบ ประตูหน้าล็อกด้วยกุญแจคล้องอันเดียว",k:"worker",c:2,hp:.9,b:500,fb:.55,plea:"“ข้างในมีเด็ก ข้างในมีเด็ก”",family:true},
+ {n:"คนไร้บ้านใต้สะพาน",t:"ชายผอมแห้งนอนบนกล่องกระดาษใต้สะพาน ไม่หนี ไม่ซ่อน มองมาเฉยๆ “มาเอาอะไรครับ ผมไม่มีอะไรเลย”",k:"worker",c:1,hp:.5,b:80,fb:.1,plea:"“สโมสรไม่จ่ายค่าหัวคนอย่างผมเต็มหรอก”"},
+];
+function huntEncounter(){
+ G.flags.huntN=(G.flags.huntN||0)+1;
+ if(G.threat>=68&&!G.flags.homeAlarm&&G.phoneBat>0) return huntHomeAlarm();
+ if(META.legacy&&!G.flags.metLegacy&&G.min>200&&chance(.35)) return huntLegacy();
+ const r=Math.random();
+ if(r<.12&&!G.flags.rivalMet) return huntRival();
+ if(r<.22&&!G.flags.baitMet) return huntBait();
+ const pool=TARGETS.filter(t=>!(G.flags.tUsed||{})[t.n]); const T=pick(pool.length?pool:TARGETS); (G.flags.tUsed=G.flags.tUsed||{})[T.n]=1;
+ huntTarget(T);
+}
+function huntTarget(T){
+ G._tgt={...T}; const live=G.phoneBat>10&&!G.rule.noSignal, ps=pOf(.55,"sneak");
+ const strike=(mul,fb)=>{ G._tgt.mul=mul; if(chance(fb)||T.c>1) return startCombat(T.k,{name:T.n,count:T.c,hpMul:T.hp,gun:!!T.gun,desc:T.plea,onWin:"targetDown"}); G.kills+=T.c; killSanity(); targetDown(); };
+ const ch=[{l:T.c>1||T.fb>.8?"⚔️ บุกเข้าไป":"🔫 ลงมือ",sub:`ค่าหัว ~${T.b} • ${T.fb>.7?"มันสู้แน่":T.fb>.35?"อาจสู้กลับ":"น่าจะไม่สู้"}`,k:"fight",go:()=>strike(1,T.fb)}];
+ if(live) ch.push({l:"📹 ไลฟ์ให้สโมสรดูก่อน แล้วค่อยลงมือ",sub:"ค่าหัวเพิ่มเยอะ แต่เขาจะรู้ตัว",k:"card",go:()=>{ G.phoneBat-=6; G.flags.live=(G.flags.live||0)+1; strike(1.6,clamp(T.fb+.3,0,1)); }});
+ ch.push({l:"😶 ปล่อยไป ทำเป็นไม่เห็น",k:"card",go:()=>{ G.mercy++; G.flags.spared=(G.flags.spared||0)+1; G.sanity=clamp(G.sanity+4,0,100); toast("ปล่อยไป",pick(["ลดปืนลง เขามองอย่างไม่เชื่อสายตา แล้ววิ่งหายไปในความมืด","หันหลังเดินไปทางอื่น ได้ยินเสียงสะอื้นโล่งอกดังไล่หลังมา"])); }});
+ ch.push({l:"🤝 พาเขาไปที่ปลอดภัย",sub:"40 นาที",k:"card",go:()=>{ passTime(40); G.mercy+=2; G.helped+=T.c; G.karma+=3; G.flags.escorted=(G.flags.escorted||0)+1; G.sanity=clamp(G.sanity+8,0,100);
+  if(T.doc){ G.hp=clamp(G.hp+25,0,G.hpMax); G.bleed=0; return toast("หมอตอบแทน","พาเธอกับคนเจ็บไปถึงศูนย์พักพิง ก่อนแยกกันเธอทำแผลให้"+me()+"ด้วย มือนิ่งมาก “อย่ากลับไปทำแบบนั้นอีก”"); }
+  toast("ส่งถึงที่",`พา${T.n}ไปส่งถึงศูนย์พักพิงชุมชน ${T.family?"เด็กโบกมือให้จากหน้าต่าง":"ก่อนแยกกันเขาถามชื่อ แต่"+me()+"ไม่ได้บอก"}`); }});
+ if(!T.family) ch.push({l:"💰 รีดเงินแล้วปล่อย",k:"card",go:()=>{ const m=ri(150,900); G.money+=m; G.karma-=1; toast("ได้เงิน",`เขายื่นทุกอย่างที่มีให้ เงิน ${m} บาท มือสั่นจนเหรียญหล่น`); }});
+ show({loc:"🎯 "+T.n,flash:true,text:T.t+"\n\n"+T.plea,k:"card",choices:ch});
+}
+function targetDown(){ const T=G._tgt||{b:200,c:1}; const v=Math.round(T.b*(T.mul||1)*(G.rule.bounty?1.3:1)); G.bounty+=v; G.targets+=T.c||1; G._tgt=null;
+ if(chance(.12)&&!G.flags.killedKnown){ G.flags.killedKnown=true; G.sanity=clamp(G.sanity+sanFx(-20),0,100); return toast("หน้าคุ้น","พอเปิดไฟฉายส่องหน้าดูชัดๆ เป็นคนที่เคยเจอกันทุกเช้าที่ร้านกาแฟหน้าออฟฟิศ เขาจำ"+me()+"ได้ก่อนหลับตา\n\nค่าหัว +"+v); }
+ toast("ค่าหัว +"+v,pick(["แอปของสโมสรเด้งแจ้งเตือน “ยืนยันเป้าแล้ว” ยอดเงินขึ้นมาทันที","เสียงข้างในเงียบลง สิ่งที่เหลืออยู่คือเสียงหัวใจตัวเอง","โดรนของสโมสรลอยลงมาถ่ายรูปยืนยัน แล้วบินกลับไปโดยไม่สนใจคนที่ยืนอยู่"])); }
+function huntRival(){ G.flags.rivalMet=true; const T=pick(TARGETS.filter(t=>t.c===1));
+ show({loc:"🎯 นักล่าอีกคน",flash:true,text:`กำลังจะเข้าไปหา${T.n} ก็มีเสียงปืนขึ้นนกดังจากหลังรถ นักล่าอีกคนในชุดล่าสัตว์ราคาแพงเล็งเป้าเดียวกันอยู่ “ตัวนี้ของผม จองไว้ตั้งแต่หัวค่ำ”`,k:"card",choices:[
+  {l:"🔫 ยิงนักล่าคนนั้นแทน",k:"fight",go:()=>{ G._tgt={b:700,c:1,rival:true}; startCombat("hunter",{name:"นักล่าคู่แข่ง",count:1,hpMul:1.1,gun:true,onWin:"rivalDown"}); }},
+  {l:"🤝 แบ่งค่าหัวกันคนละครึ่ง",k:"card",go:()=>{ G.bounty+=Math.round(T.b/2); G.targets++; toast("ดีลกัน","เขาลงมือ "+me()+"ถ่ายรูปยืนยัน แบ่งกันคนละครึ่ง เขายิ้มให้เหมือนเพื่อนร่วมงาน"); }},
+  {l:"🕊️ ตะโกนบอกเป้าให้วิ่ง",k:"card",go:()=>{ G.mercy+=2; G.helped++; toast("เป้าวิ่งหนี",T.n+"วิ่งหายไปในตรอก นักล่าคนนั้นหันปืนมาทางนี้ “มึงจะเสียใจ”",()=>startCombat("hunter",{name:"นักล่าที่โกรธจัด",count:1,hpMul:1.1,gun:true})); }},
+  {l:"↩️ ถอยไป ปล่อยให้มัน",k:"card",go:()=>toast("ถอย","ได้ยินเสียงปืนนัดเดียวดังไล่หลังมา")}]}); }
+function rivalDown(){ G.flags.killedRival=true; G.bounty+=700; G.targets++; giveItem("ไรเฟิล"); G.ammo+=3; toast("คู่แข่งหมดไป","สโมสรจ่ายค่าหัวนักล่าด้วยกันแพงกว่าคนธรรมดา ในกระเป๋ามันมีไรเฟิลกับกระสุน"); }
+function huntBait(){ G.flags.baitMet=true; const pr=pOf(.5,"read");
+ const trap=()=>{ G._tgt={trap:true,b:0}; G._baitDeath=true; startCombat("mask",{count:3,name:"พวกที่ซุ่มอยู่",desc:"เด็กเงียบกริบทันที คนในเงามืดเดินออกมาสามคน",onWin:"baitWin"}); };
+ show({loc:"🎯 เด็กร้องไห้กลางถนน",flash:true,text:"เด็กผู้ชายคนหนึ่งยืนร้องไห้อยู่กลางสี่แยกที่ว่างเปล่า ไม่มีผู้ใหญ่อยู่ใกล้ๆ ไม่มีใครเลย เงียบเกินไป",k:"card",choices:[
+  {l:"🚶 เดินเข้าไปหา",k:"card",go:trap},
+  {l:"👀 ขึ้นที่สูง มองรอบๆ ก่อน",p:pr,k:"card",go:()=>chance(pr)?toast("กับดัก","จากบนหลังคาเห็นชัด มีคนหมอบอยู่ในเงาสามจุดรอบสี่แยก เด็กถูกผูกข้อเท้าไว้กับเสาไฟ เป็นเหยื่อล่อนักล่า",()=>{ show({loc:"🎯 กับดัก",text:"ตอนนี้รู้แล้วว่าใครเป็นใคร",k:"card",choices:[
+   {l:"🔫 ยิงพวกที่ซุ่มจากบนนี้",k:"fight",go:()=>startCombat("mask",{count:3,name:"พวกที่ซุ่มอยู่",range:2,onWin:"baitWin"})},
+   {l:"🕊️ รอจังหวะ ลงไปแก้เชือกให้เด็ก",p:pOf(.45,"sneak"),k:"card",go:()=>chance(pOf(.45,"sneak"))?(G.mercy+=3,G.helped++,toast("พาเด็กหนี","ตัดเชือกได้ตอนพวกมันหันไปทางเสียงรถ อุ้มเด็กวิ่งออกมาทางตรอก เด็กกอดคอแน่นไม่ยอมปล่อย")):trap()},
+   {l:"↩️ ไม่ยุ่ง ไปทางอื่น",k:"card",go:()=>toast("ไม่ยุ่ง","เดินอ้อมออกไป เสียงเด็กร้องดังไล่หลังอยู่นาน")}]}); }):trap()},
+  {l:"↩️ ไม่ยุ่ง ไปทางอื่น",k:"card",go:()=>toast("ไม่ยุ่ง","มีบางอย่างไม่ถูกต้อง เดินอ้อมออกไปอีกทาง")}]}); }
+function baitWin(){ G._baitDeath=false; G.bounty+=450; G.targets+=1; toast("ล้มกับดัก","คนที่ซุ่มอยู่ล้มหมด แก้เชือกที่ข้อเท้าเด็ก เด็กวิ่งหายไปโดยไม่พูดอะไร สโมสรจ่ายค่าหัวพวกซุ่มให้ด้วย"); }
+function huntLegacy(){ G.flags.metLegacy=true; const L=META.legacy;
+ show({loc:"🎯 คนที่หน้าคุ้นมาก",flash:true,text:`${L.gender==="m"?"ผู้ชาย":"ผู้หญิง"}อายุราว ${L.age} ปี ใส่ชุดทำงาน${jobName(L.job)} วิ่งกระหืดกระหอบ มือกำมือถือแน่น บนจอมีแชตจาก${L.w.rel}เด้งไม่หยุด\n\nหน้าตา ท่าทาง วิธีวิ่ง ทุกอย่างเหมือนคนที่เคยหนีกลับบ้านเมื่อปีก่อน เหมือนกันจนขนลุก`,k:"card",choices:[
+  {l:"🔫 ลงมือ ค่าหัวสูงสุดของคืน",k:"fight",go:()=>{ G._tgt={b:1200,c:1}; G.flags.killedSelf=true; G.sanity=clamp(G.sanity+sanFx(-25),0,100); startCombat("worker",{name:"คนที่หน้าเหมือนตัวเอง",count:1,hpMul:1.2,desc:"เขาหันมาสู้ ตาเหมือนกันเปี๊ยบ",onWin:"targetDown"}); }},
+  {l:"🕊️ ปล่อยเขาไป บอกทางลัดให้ด้วย",k:"card",go:()=>{ G.flags.sparedSelf=true; G.mercy+=3; G.sanity=clamp(G.sanity+15,0,100); toast("ไปเถอะ","“ไปทางท่อระบายน้ำ ไม่มีด่าน” เขามองหน้านาน เหมือนจะถามอะไร แต่ไม่ได้ถาม แล้ววิ่งไป"); }}]}); }
+function huntHomeAlarm(){ G.flags.homeAlarm=true; const W=G.w.n;
+ show({loc:"📱 "+G.w.rel,ic:"📳",flash:2,text:`มือถือสั่นรัว ${W}ส่งรูปมา ถ่ายจากช่องหน้าต่างบ้าน มีคนใส่ชุดล่าสัตว์สามคนยืนอยู่หน้ารั้ว คนหนึ่งกำลังพ่นสีเครื่องหมายลงบนประตูบ้าน\n\nข้อความตามมา “มีคนมา เขาเรียกชื่อ${G.w.you}”`,k:"card",timer:window.__BOT?0:10,onTimeout:()=>{ G.threat=clamp(G.threat+15,0,100); flow(); },choices:[
+  {l:"🏃 รีบกลับบ้าน",k:"card",go:()=>{ G.flags.rushHome=true; G.sanity=clamp(G.sanity-5,0,100); toast("ทิ้งเป้าทั้งหมด","ตอนนี้ไม่มีเป้าอื่นแล้ว นอกจากทางกลับบ้าน (บ้านอยู่จุดเริ่มต้น)"); }},
+  {l:"📞 โทรสั่งให้ซ่อนในที่ที่นัดไว้",k:"card",go:()=>{ G.flags.wHidden=true; G.threat=Math.max(0,G.threat-15); toast("ซ่อนแล้ว",W+"กระซิบว่า “ซ่อนแล้ว” แล้วตัดสายไปเอง"); }},
+  {l:"😶 ล่าต่อ",k:"card",go:()=>{ G.threat=clamp(G.threat+20,0,100); G.sanity=clamp(G.sanity+sanFx(-12),0,100); G.karma-=4; toast("ปิดเครื่อง","กดปิดเสียงมือถือ ใส่กระเป๋า แล้วเดินต่อ มือถือสั่นอยู่ในกระเป๋าอีกนาน"); }}]}); }
+function huntClub(){
+ G.arrived=true; const hasP=G.flags.hasProof||G.inv.includes("แฟลชไดรฟ์หลักฐาน"), fire=G.inv.some(x=>WEAPONS[x]&&WEAPONS[x].fire);
+ show({loc:"⛺ แคมป์สโมสรนักล่า",text:`เต็นท์ผ้าใบสีขาวเรียงกันกลางสนามกอล์ฟ ไฟประดับระยิบระยับ วงดนตรีเล่นแจ๊ส จอใหญ่โชว์กระดานคะแนน ชื่อ${me()}อยู่อันดับที่ ${G.bounty>=3000?1:G.bounty>=1500?ri(2,5):ri(8,30)} ค่าหัวรวม ${G.bounty} บาท\n\nคนใส่สูทยื่นแก้วแชมเปญให้ “ยินดีด้วยครับ คืนนี้คุณทำได้ดีมาก”`,k:"card",choices:[
+  {l:"💰 ส่งยอด รับเงิน",k:"end",go:()=>huntEnd("club")},
+  hasP?{l:"📂 แอบดูดรายชื่อสมาชิกออกมา",p:pOf(.55,"tech"),k:"end",go:()=>chance(pOf(.55,"tech"))?finishEnding(["hmercy",2]):finishEnding(["hfall",2])}:null,
+  {l:"🔥 จุดไฟเผาแคมป์",sub:fire?"มีของที่ใช้ได้":"ต้องหาถังแก๊สในครัวแคมป์",p:fire?.75:.4,k:"end",go:()=>chance(fire?.75:.4)?finishEnding(["hmercy",5]):finishEnding(["hfall",2])},
+  G.kills>=3?{l:"🗡️ ฆ่าคนอันดับหนึ่งบนกระดาน ขึ้นแทน",p:.5,k:"end",go:()=>chance(.5)?finishEnding(["hwin",5]):finishEnding(["hfall",1])}:null]});
+}
+function huntEnd(where){
+ const f=G.flags, b=G.bounty, home=where==="home", club=where==="club"; let r;
+ if(home){ G.arrived=true;
+  if(G.threat>=72&&!f.wHidden) return finishEnding((WEAPONS[G.weapon].gun&&G.ammo>0)||G.hp>G.hpMax*.5?["hwin",7]:["hfall",3]);
+  if(!G.sisterSafe||(f.homeAlarm&&!f.rushHome&&!f.wHidden&&chance(.5))) return finishEnding(["hfall",9]); }
+ if(f.sparedSelf) return finishEnding(["hmercy",3]);
+ if(f.killedKnown&&chance(.6)) return finishEnding(["hfall",6]);
+ if(G.kills===0){
+  r=pickUnseen("hmercy",[home&&f.escorted?1:-1,(G.helped>=3)?4:-1,home?9:-1,7,home&&G.sanity<45?6:-1,home?0:-1,G.money>=4000?8:-1]);
+  if(G.money>=4000&&r&&r[1]===8) G.money=0; return finishEnding(r); }
+ if((f.spared||0)>=2&&G.kills<=1&&chance(.5)) return finishEnding(["hfall",5]);
+ if(club) r=pickUnseen("hwin",[b>=3000?0:-1,b>=1800?1:-1,(f.live||0)>=2?4:-1,f.killedRival?5:-1,!(f.live)?8:-1,G.kills>=4&&G.masks.length?3:-1,b<1800?6:-1]);
+ else if(home) r=pickUnseen("hwin",[b>=600?2:-1,G.kills>=4?3:-1,6,G.kills>=5&&chance(.4)?9:-1]);
+ else r=pickUnseen("hwin",[6,!(f.live)&&G.kills>=2?8:-1,G.kills>=4?9:-1,G.kills>=3&&G.masks.length?3:-1]);
+ finishEnding(r||["hwin",6]);
+}
+function huntDeath(e){
+ if(G._baitDeath) return ["hfall",4];
+ if(G._grudgeFight) return ["hfall",7];
+ if(e&&e.key==="state") return ["hfall",2];
+ if(e&&(e.key==="hunter"||e.htype)) return ["hfall",1];
+ if(WEAPONS[G.weapon]&&WEAPONS[G.weapon].gun&&G.ammo<=0&&["hell","dawn"].includes(phase().k)) return ["hfall",8];
+ return ["hfall",pick([0,0,0,8,1])];
+}
+function renderPrepHunt(){
+ setNav(false); const n=node(), pl=place(n);
+ const pool=["ปืนพก","ลูกซอง","มีดสปาต้า","หน้าไม้","หน้ากากยักษ์","ไฟฉาย","ชุดปฐมพยาบาล","ลวดดัก","พาวเวอร์แบงก์"], NP=3+pk("bag"); let chosen=[];
+ const wn=G.w.rel+(G.w.name?" “"+G.w.name+"”":"");
+ const draw=()=>{ app.innerHTML=`<div class="scr"><div class="panel flash"><div class="scene-ic">🩸</div><div class="loc">18:52 • บ้านตัวเอง ย่าน${G.routeFrom}</div>
+  <div class="who">คุณคือ${G.gender==="m"?"ผู้ชาย":"ผู้หญิง"} ${G.age} ปี อาชีพ${G.job.name}</div>
+  <div class="story">ปีนี้ไม่หนีแล้ว ทั้งปีที่ผ่านมาเก็บเงินซื้อของไว้ในห้องเก็บของหลังบ้าน ล็อกกุญแจไว้ไม่ให้ใครเห็น\n\nแอปของสโมสรนักล่าเด้งแจ้งเตือน “บัญชีของคุณพร้อมแล้ว ค่าหัวจ่ายตามเป้าที่ยืนยัน” แคมป์ตั้งอยู่ห่างออกไป <b>${G.map.km} กม.</b>\n<b>${wn}</b> นั่งดูทีวีอยู่ในห้องนั่งเล่น ไม่รู้ว่าคุณกำลังจะออกไปไหน</div>
+  <div class="small">🙂 นิสัย${G.trait.name}: ${G.trait.desc}</div></div>
+  <div class="howto"><b>🎯 คืนนี้</b><br>🔫 ออกไปหาเป้า ลงมือ หรือปล่อยไปก็ได้ แต่ละเป้ามีค่าหัว 💰<br>⛺ ไปส่งยอดที่แคมป์สโมสร (บนสุดของแผนที่) หรือกลับเข้าบ้าน (จุดเริ่มต้น) ก่อน 07:00<br>🏠 ระหว่างที่ออกไป บ้านตัวเองก็อาจโดนเหมือนกัน<br>🕊️ จะเลิกล่ากลางทางก็ได้</div>
+  <div class="panel"><div class="small">📢 กฎปีนี้: <b style="color:var(--amber)">${G.ruleText}</b></div></div>
+  <div class="sec">🔐 เปิดห้องเก็บของ หยิบได้ ${NP} อย่าง (${chosen.length}/${NP})</div><div class="pick-grid" id="ll"></div><button class="btn primary" id="goBtn" style="margin-top:14px">${chosen.length<NP?"🚨 ไซเรนดังแล้ว! ออกไปทั้งแบบนี้":"🩸 ออกไป"}</button></div>`;
+  const L=$("#ll"); pool.forEach((t,i)=>{ const b=document.createElement("button"); b.className="btn"+(chosen.includes(i)?" primary":""); b.innerHTML=`<span class="tic">${chosen.includes(i)?"✅":t==="หน้ากากยักษ์"?"👹":itemIc(t)}</span>${t}`; b.onclick=()=>{ chosen.includes(i)?chosen=chosen.filter(x=>x!==i):chosen.length<NP&&chosen.push(i); draw(); }; L.appendChild(b); });
+  $("#goBtn").onclick=()=>huntGo(chosen.map(i=>pool[i])); };
+ draw(); window.__prep=()=>huntGo(pool.slice(0,NP));
+}
+function huntGo(toks){ if(toks.some(t=>WEAPONS[t]&&WEAPONS[t].gun)) G.ammo+=5; toks=toks.filter(t=>{ if(t==="หน้ากากยักษ์"){ if(!G.masks.includes(t))G.masks.push(t); return false; } return true; }); startNight(toks); }
+
+//========================= โหมดเฝ้าบ้าน =========================
+// เราคือคนที่รออยู่ที่บ้าน ส่วนคนที่กำลังกลับมา (G.w ในโหมดนี้) เป็นฝ่ายส่งข้อความมา
+const HOME_ROLES=[
+ {me:"แม่",g:"f",a:[42,64],rel:"ลูก",n:"ลูก",you:"แม่",tone:"kid",names:["ต้น","แพร","กัน","ฝ้าย","เจ"]},
+ {me:"พ่อ",g:"m",a:[42,64],rel:"ลูก",n:"ลูก",you:"พ่อ",tone:"kid",names:["ต้น","แพร","กัน","ฝ้าย","เจ"]},
+ {me:"ยาย",g:"f",a:[60,74],rel:"หลาน",n:"หลาน",you:"ยาย",tone:"grand",names:["บีม","ข้าวฟ่าง","โอม","มายด์"]},
+ {me:"ตา",g:"m",a:[60,74],rel:"หลาน",n:"หลาน",you:"ตา",tone:"grand",names:["บีม","ข้าวฟ่าง","โอม","มายด์"]},
+ {me:"พี่",a:[24,42],rel:"น้อง",n:"น้อง",you:"พี่",tone:"sib",names:["มิว","ภูมิ","น้ำ","บอส"]},
+ {me:"น้อง",a:[18,28],rel:"พี่",n:"พี่",you:"น้อง",tone:"elder",names:["เก่ง","ปลา","โจ้","แนน"]},
+ {me:"เพื่อนร่วมห้อง",a:[20,40],rel:"เพื่อนสนิท",n:"เพื่อน",you:"มึง",tone:"friend",names:["เอก","แป้ง","โอ๊ต","ฝน"]},
+];
+// ข้อความจากคนที่กำลังกลับมา เขียนแยกตามความสัมพันธ์
+const TRAV={
+ kid:{start:["{you} ไซเรนดังแล้ว {i}ยังอยู่ออฟฟิศ กำลังออกนะ","{you}ล็อกประตูหรือยัง {i}จะรีบกลับ อย่าเปิดให้ใคร"],
+  mid:["{i}ผ่านด่านแรกมาได้แล้ว {you}ไม่ต้องห่วง","แบตเหลือครึ่งนึง {i}จะพิมพ์น้อยๆ นะ{you}","{i}หลบอยู่ในร้านสะดวกซื้อ ข้างนอกมีแก๊งเดินผ่าน รอแป๊บนะ{you}"],
+  danger:["{you} มีคนตามมา {i}ปิดเสียงก่อน","{i}เจ็บนิดหน่อย ไม่เป็นไรมาก {you}อย่าร้องไห้นะ"],
+  near:["อีกไม่ไกลแล้ว{you} {i}เห็นป้ายปากซอยเราแล้ว","{you}เตรียมเปิดประตูนะ {i}จะเคาะสามที"],
+  last:["{you} {i}รัก{you}นะ","{you}... ถ้า{i}ไปไม่ถึง {you}อย่าออกมาตามนะ"],
+  fake:["ครับ กำลังไปครับ","อีกไม่นานถึงแล้วครับ เปิดประตูรอเลยนะครับ"]},
+ grand:{start:["{you} ไซเรนดังแล้ว หลานกำลังออกจากที่ทำงานนะ","{you}กินยาแล้วนอนรอนะ หลานจะรีบไป"],
+  mid:["{you}ไม่ต้องห่วงหลานนะ หลานยังดีอยู่","หลานติดอยู่ในตึกจอดรถ แต่ปลอดภัย","{you}อย่าลืมดับไฟหน้าบ้านนะ คืนนี้แสงอันตราย"],
+  danger:["{you} มีรถไล่ตามมา หลานต้องวิ่งก่อน","หลานล้ม หัวเข่าแตก แต่ยังเดินได้"],
+  near:["{you} หลานใกล้ถึงแล้ว เห็นต้นมะม่วงหน้าบ้านแล้ว","{you}เตรียมเปิดประตูให้หลานนะ หลานจะเคาะสามที"],
+  last:["{you} หลานขอโทษที่กลับไม่ทันทุกปีเลย","{you}... หลานรัก{you}ที่สุด"],
+  fake:["ครับคุณ{you} ใกล้ถึงแล้วครับ","เปิดประตูรอไว้ได้เลยครับ"]},
+ sib:{start:["{you} เลิกงานไม่ทันว่ะ ไซเรนดังแล้ว กำลังรีบกลับนะ","{you}ปิดไฟหน้าบ้านด้วยนะ เดี๋ยว{i}ไปถึง"],
+  mid:["ผ่านมาครึ่งทางแล้ว{you} ยังโอเคอยู่","{i}เจอคนดีช่วยพาหลบ ไม่ต้องห่วงนะ{you}","แบตจะหมดละ{you} พาวเวอร์แบงก์ก็ไม่มี"],
+  danger:["{you} {i}ไปต่อไม่ได้ มีแก๊งยึดสะพาน ต้องอ้อม","มีคนยิงมา {i}หลบอยู่หลังรถ"],
+  near:["{you}! {i}เห็นบ้านแล้ว","เปิดประตูรอเลย{you} {i}จะเคาะสามที"],
+  last:["{you} ถ้า{i}ไม่ถึง ฝากดูแลแมวด้วยนะ","{you} ขอบคุณที่รอทุกปี"],
+  fake:["ครับพี่ ใกล้ถึงแล้วครับ","เปิดรอได้เลยครับ"]},
+ elder:{start:["{you} พี่เลิกงานไม่ทัน แต่พี่จะกลับให้ได้ อย่าออกไปไหนนะ","ล็อกประตูหน้าหลังให้หมดนะ{you} พี่จะรีบไป"],
+  mid:["พี่ผ่านด่านมาได้แล้ว {you}ไม่ต้องกลัว","พี่หลบในตึกร้างก่อน ข้างนอกมีคนเยอะ","กินข้าวหรือยัง{you} ในตู้มีมาม่า"],
+  danger:["{you} พี่โดนตาม จะปิดเสียงก่อนนะ","พี่โดนฟันแขน ไม่ลึก พี่ยังไหว"],
+  near:["{you} พี่ใกล้ถึงแล้ว อีกไม่กี่ซอย","พี่จะเคาะสามที ถามรหัสพี่ด้วยนะ เผื่อไม่ใช่พี่"],
+  last:["{you} พี่ขอโทษนะ","ถ้าพี่ไม่ถึง {you}ต้องเข้มแข็งนะ"],
+  fake:["ครับน้อง ใกล้ถึงแล้วครับ","เปิดรอพี่ได้เลยครับ"]},
+ friend:{start:["มึง กูเลิกงานไม่ทัน แม่ง ไซเรนดังละ","ล็อกห้องดีๆ นะมึง กูกำลังกลับ"],
+  mid:["กูยังไม่ตาย ผ่านครึ่งทางละ","กูหลบในร้านเหล้าที่ปิดไปแล้ว มีคนอยู่ด้วยห้าคน","แบตกูเหลือสามสิบ ประหยัดหน่อยนะ"],
+  danger:["มึง มีคนตามกูมา เดี๋ยวกูทักใหม่","กูโดนฟาดหัว เลือดไหล แต่ยังเดินได้"],
+  near:["ใกล้ละมึง เห็นเซเว่นหน้าปากซอยละ","เตรียมเปิดประตู กูจะเคาะสามที"],
+  last:["มึง ถ้ากูไม่ถึง เกมกูยกให้มึงนะ","ขอบใจที่รอว่ะ"],
+  fake:["ครับ ใกล้ถึงแล้วครับ","เปิดประตูรอได้เลยครับผม"]},
+};
+const HROOMS={
+ front:{n:"หน้าบ้าน",ic:"🚪",entry:"f",en:"ประตูหน้า",d:["ประตูเหล็กหน้าบ้านปิดสนิท แสงไฟถนนลอดเข้ามาใต้ประตูเป็นเส้นบางๆ","ได้ยินเสียงฝีเท้าผ่านหน้าบ้านเป็นระยะ ทุกครั้งที่เสียงหยุด หัวใจก็หยุดตาม","ตาแมวที่ประตูมีรอยนิ้วมือเปื้อนอะไรสักอย่างจากข้างนอก"],loot:["ไม้เบสบอล","ไฟฉาย"]},
+ living:{n:"ห้องนั่งเล่น",ic:"🛋️",d:["ทีวีปิดอยู่ แต่จอดำสะท้อนเงาตัวเอง ดูเหมือนมีคนอีกคนนั่งอยู่บนโซฟา","รูปครอบครัวบนผนังมองลงมา ในรูปมี{W}ยิ้มอยู่","นาฬิกาแขวนผนังเดินเสียงดังผิดปกติในความเงียบ"],loot:["พาวเวอร์แบงก์","อาหารกระป๋อง"]},
+ kitchen:{n:"ครัว",ic:"🍳",entry:"b",en:"ประตูหลัง",d:["ประตูหลังบานไม้เก่า กลอนหลวมมาสามปีแล้ว","ตู้เย็นส่งเสียงหึ่งๆ ไฟในตู้สว่างวาบทุกครั้งที่เปิด","มีดในชั้นวางเรียงจากเล็กไปใหญ่ ใบที่ใหญ่ที่สุดหายไป หรือว่าลืมเก็บ"],loot:["มีดอีโต้","ขวดน้ำ"]},
+ upstairs:{n:"ชั้นสอง",ic:"🪟",entry:"w",en:"หน้าต่าง",d:["หน้าต่างชั้นสองมองเห็นถนนได้ทั้งเส้น ไฟถนนดับไปครึ่งหนึ่ง","ม่านขยับเบาๆ ทั้งที่หน้าต่างปิด","จากตรงนี้เห็นบ้านหลังอื่นในซอย บางหลังไฟติด บางหลังประตูเปิดค้าง"],loot:["ชุดปฐมพยาบาล","ปืนพก"]},
+ attic:{n:"ใต้หลังคา",ic:"🕸️",d:["ใต้หลังคาร้อนอบอ้าว ฝุ่นหนา บันไดพับดึงขึ้นมาเก็บได้","ได้ยินเสียงทุกอย่างในบ้านจากตรงนี้ ทุกเสียงดังเหมือนอยู่ข้างหู","มีกล่องของเก่าวางเรียง กล่องหนึ่งเขียนว่า “ของ{W}”"],loot:["ลวดดัก","ผ้าใบ"]},
+};
+const HVISIT=[
+ {who:"ลุงข้างบ้าน",t:"“เปิดหน่อย ลุงเอง บ้านลุงโดนพังประตูแล้ว ลุงหนีออกมาได้คนเดียว”",good:.6,ally:"ลุงข้างบ้าน",gt:"ลุงเข้ามาแล้ว แกช่วยยกตู้ไปดันประตูหลังให้ทันที แกไม่พูดถึงคนอื่นในบ้านแกเลย",bt:"ลุงเข้ามาแล้วยืนมองไปรอบบ้าน นับประตู นับหน้าต่าง แล้วยิ้ม"},
+ {who:"ผู้หญิงอุ้มเด็ก",t:"เสียงเด็กร้องจ้า แล้วเสียงผู้หญิงกระซิบ “ขอร้อง แค่ให้ลูกหนูเข้าไป หนูอยู่ข้างนอกก็ได้”",good:.55,ally:"แม่ลูกอ่อน",gt:"เธอกับลูกเข้ามา เด็กหลับทันทีที่ได้อยู่ในที่มืดเงียบ เธอนั่งเฝ้าหน้าต่างให้",bt:"ทันทีที่ประตูแง้ม ผู้ชายสองคนที่หลบอยู่ข้างรั้ววิ่งตามเข้ามา"},
+ {who:"คนใส่ชุดตำรวจ",t:"“ตำรวจครับ เปิดประตูด้วย เรามาพาประชาชนไปจุดปลอดภัย”",good:.35,ally:"ตำรวจนอกเวลา",gt:"เป็นตำรวจจริง เขาไม่ได้พาใครไปไหน แค่ขอนั่งพักในบ้าน ปืนวางบนตัก หันไปทางประตู",bt:"เขาเข้ามาแล้วถามหาทอง ชุดเขามีรอยเลือดที่ไม่ใช่ของเขา"},
+ {who:"เด็กหนุ่มเลือดท่วมหัว",t:"เสียงทุบประตูอ่อนแรง “ช่วยด้วย พวกมันจะฆ่าผม ผมวิ่งไม่ไหวแล้ว”",good:.7,ally:"เด็กหนุ่มหลงทาง",gt:"เขาทรุดลงตรงพื้นห้องนั่งเล่น ทำแผลให้ เขาบอกว่าพวกที่ไล่เขามาไปทางอื่นแล้ว",bt:"เขาเข้ามา แล้วพวกที่ไล่เขาก็ตามรอยเลือดมาถึงหน้าบ้าน"},
+ {who:"ชายใส่สูทถือเงิน",t:"“ผมจ่ายสามหมื่น ขอแค่ให้ผมหลบถึงเช้า” เขาสอดธนบัตรปึกหนึ่งเข้ามาใต้ประตู",good:.45,ally:"ชายใส่สูท",gt:"เขาเข้ามา นั่งตัวสั่นอยู่มุมห้อง เงินเป็นของจริง",bt:"เงินเป็นของจริง แต่คนที่ตามล่าเขามาก็เป็นของจริง และมันรู้ว่าเขาเข้ามาบ้านนี้"},
+];
+function rollHomeRole(g){ const R=pick(HOME_ROLES.filter(r=>!r.g||r.g===g)); return R; }
+function newHome(gender){
+ META.runs++;
+ const R=rollHomeRole(gender), age=ri(R.a[0],R.a[1]), trait=pick(TRAITS), rule=pick(YEAR_RULES);
+ const job=pick(JOBS.filter(j=>age>=(j.min||18)&&age<=(j.max||99)));
+ const tg=chance(.5)?"m":"f", ti=R.tone==="friend"?"กู":R.tone==="elder"?"พี่":R.tone==="grand"?"หลาน":tg==="m"?"ผม":"หนู";
+ const w={rel:R.rel,n:R.n,you:R.you,i:ti,self:R.you,arch:R.tone==="friend"?"p":R.tone==="kid"||R.tone==="grand"?"e":"y",name:pick(R.names),tone:R.tone};
+ const hpMax=(trait.id==="tough"?125:100)+(age>=60?-18:age>=46?-8:0)+pk("tough")*8;
+ const fate=(()=>{ const r=Math.random(); return r<.5?"arrive":r<.63?"late":r<.8?"dead":r<.92?"impostor":"hostage"; })();
+ G={v:VER,mode:"home",rid:Date.now()+Math.random(),gender,age,job,trait,rule:rule.e,ruleText:rule.t,w,role:R.me,noMercy:false,
+  dest:"บ้าน",routeFrom:"",min:-8,acc:0,hp:hpMax,hpMax,stamina:100,sanity:100,fuel:0,noise:0,trail:0,money:ri(300,1500),ammo:0,phoneBat:ri(60,95),
+  karma:0,kills:0,helped:0,betrayedCount:0,drugAddict:0,bleed:0,infection:0,legHurt:false,armHurt:false,veh:"เดินเท้า",weapon:"มือเปล่า",inv:[],wear:{},masks:[],comps:[],partner:null,
+  flags:{},used:{},log:[],threat:10,sisterSafe:true,chatlog:[],unread:0,secretCode:ri(100,999),tlIdx:0,grudges:[...Array(ri(0,1))].map(()=>({who:pick(["เพื่อนบ้านที่เคยทะเลาะเรื่องที่จอดรถ","ญาติที่ยืมเงินไปแล้วไม่คืน","ลูกน้องเก่าที่ถูกไล่ออก","คนที่เราเคยแจ้งตำรวจจับ"]),shown:false})),
+  room:"living",house:{f:0,b:0,w:0},lights:true,searched:{},hev:[],over:false,ending:null,
+  tr:{fate,km:ri(60,110),arriveAt:ri(400,650),deadAt:ri(200,520),fakeAt:ri(330,560)}};
+ if(G.rule.guns){ G.inv.push("ปืนพก"); G.ammo+=4; G.weapon="ปืนพก"; }
+ if(pk("knife")) G.inv.push("มีดพก"); if(pk("dog")) G.comps.push({name:"เจ้าดำ",dog:true,intro:"",motive:"จริงใจ",loyalty:90,hp:70});
+ homeTimeline(); homeEvents(); renderPrepHome();
+}
+function homeTimeline(){ const T=TRAV[G.w.tone], tr=G.tr, tl=[]; const add=(t,txt,tag)=>{ if(t<700) tl.push([t,txt,tag]); };
+ add(ri(5,25),pick(T.start)); add(ri(80,140),pick(T.mid)); add(ri(170,240),pick(T.mid.filter(x=>!tl.some(y=>y[1]===x)))); add(ri(250,330),pick(T.danger));
+ if(tr.fate==="arrive") add(tr.arriveAt-ri(40,70),pick(T.near));
+ if(tr.fate==="late") add(ri(520,620),pick(T.danger));
+ if(tr.fate==="dead"){ for(let i=tl.length-1;i>=0;i--) if(tl[i][0]>tr.deadAt) tl.splice(i,1); add(tr.deadAt-5,pick(T.last),"last"); }
+ if(tr.fate==="impostor"){ for(let i=tl.length-1;i>=0;i--) if(tl[i][0]>tr.fakeAt-130) tl.splice(i,1); add(tr.fakeAt-120,pick(T.fake),"fake"); add(tr.fakeAt-50,T.fake.find(x=>!tl.some(y=>y[1]===x))||T.fake[0],"fake"); }
+ tl.sort((a,b)=>a[0]-b[0]); G.tl=tl; }
+function homeEvents(){ const ev=[], used={}; const W={knock:3,test:4,scream:1,fire:1,peeper:1,scam:1,dogs:G.rule.dogs?2:.6,power:G.rule.blackout?0:.7,grudge:G.grudges.length?1.5:0};
+ const n=ri(7,9); let t=ri(30,60);
+ for(let i=0;i<n;i++){ const keys=Object.keys(W).filter(k=>W[k]>0&&!(["fire","power","scam","grudge","scream"].includes(k)&&used[k])); let tot=keys.reduce((s,k)=>s+W[k],0), r=Math.random()*tot, k=keys[0]; for(const x of keys){ r-=W[x]; if(r<=0){k=x;break;} }
+  used[k]=1; ev.push({t,type:k}); t+=ri(50,85); if(t>680) break; }
+ const tr=G.tr; if(tr.fate==="arrive") ev.push({t:tr.arriveAt,type:"arrive"}); if(tr.fate==="impostor") ev.push({t:tr.fakeAt,type:"fake"}); if(tr.fate==="hostage") ev.push({t:ri(420,600),type:"hostage"});
+ ev.sort((a,b)=>a.t-b.t); G.hev=ev; }
+function renderPrepHome(){
+ setNav(false); const pool=["ไฟฉาย","พาวเวอร์แบงก์","มีดพก","ชุดปฐมพยาบาล","อาหารกระป๋อง","ลวดดัก","ไม้เบสบอล","ขวดน้ำ"], NP=3+pk("bag"); let chosen=[];
+ const wn=G.w.rel+(G.w.name?" “"+G.w.name+"”":"");
+ const draw=()=>{ app.innerHTML=`<div class="scr"><div class="panel flash"><div class="scene-ic">🏠</div><div class="loc">18:52 • บ้าน</div>
+  <div class="who">คุณคือ${G.role} ${G.gender==="m"?"ผู้ชาย":"ผู้หญิง"} ${G.age} ปี อาชีพ${G.job.name}</div>
+  <div class="story">คืนนี้กลับถึงบ้านทันก่อนไซเรน แต่<b>${wn}</b>ยังไม่กลับ เพิ่งได้ข้อความว่าเลิกงานไม่ทัน และอยู่ห่างออกไป <b>${G.tr.km} กม.</b>\n\nอีก 8 นาทีไซเรนจะดัง ข้างนอกเริ่มมีเสียงประตูเหล็กถูกดึงลงทีละบ้าน</div>
+  <div class="small">🙂 นิสัย${G.trait.name}: ${G.trait.desc}</div></div>
+  <div class="howto"><b>🎯 คืนนี้</b><br>🏠 อยู่รอดในบ้านจนถึง 07:00<br>🪑 ดันของขวางประตูหน้า ประตูหลัง หน้าต่าง<br>🚪 มีคนมาเคาะประตูตลอดคืน เปิดให้ใครบ้าง เลือกเอง<br>📱 ${G.w.n}จะแชตมาระหว่างทาง ถ้ามาถึงจริง จะเคาะสามที</div>
+  <div class="panel"><div class="small">📢 กฎปีนี้: <b style="color:var(--amber)">${G.ruleText}</b></div><div class="small" style="margin-top:6px">🔐 รหัสลับที่นัดกับ${G.w.n}ไว้: <b style="color:var(--green);font-size:16px">${G.secretCode}</b></div></div>
+  <div class="sec">🎒 รีบเตรียมของก่อนไซเรน ได้ ${NP} อย่าง (${chosen.length}/${NP})</div><div class="pick-grid" id="ll"></div><button class="btn primary" id="goBtn" style="margin-top:14px">${chosen.length<NP?"🚨 ไซเรนดังแล้ว!":"🔒 ล็อกประตู"}</button></div>`;
+  const L=$("#ll"); pool.forEach((t,i)=>{ const b=document.createElement("button"); b.className="btn"+(chosen.includes(i)?" primary":""); b.innerHTML=`<span class="tic">${chosen.includes(i)?"✅":itemIc(t)}</span>${t}`; b.onclick=()=>{ chosen.includes(i)?chosen=chosen.filter(x=>x!==i):chosen.length<NP&&chosen.push(i); draw(); }; L.appendChild(b); });
+  $("#goBtn").onclick=()=>startNight(chosen.map(i=>pool[i])); };
+ draw(); window.__prep=()=>startNight(pool.slice(0,NP));
+}
+function homeTick(){
+ if(G.bleed>0){ G.hp-=G.bleed; addLog(`เลือดไหล -${G.bleed}`,"bad"); }
+ if(G.infection>0) G.hp-=G.infection;
+ if(G.flags.adrenaline){ G.flags.adrenaline--; }
+ G.noise=Math.max(0,G.noise-1); G.phoneBat=clamp(G.phoneBat-1,0,100); G.stamina=clamp(G.stamina-(G.rule.heat?4:2),0,100);
+ const ph=phase().k; G.threat=clamp(G.threat+({early:1,deep:2,hell:3,dawn:1})[ph]*(G.lights?1.4:.8)-((G.house.f+G.house.b+G.house.w)*.25),0,100);
+ if(!G.lights&&G.sanity<90&&chance(.3)) G.sanity-=2; else if(G.lights) G.sanity=clamp(G.sanity+1,0,100);
+ while(G.tlIdx<G.tl.length&&G.tl[G.tlIdx][0]<=G.min){ const m=G.tl[G.tlIdx++]; if(G.phoneBat<=0||G.rule.noSignal&&chance(.3)) continue; pushChat("them",m[1],true); if(m[2]==="last") G.flags.lastMsg=true; if(m[2]==="fake") G.flags.fakeMsg=(G.flags.fakeMsg||0)+1; }
+ G.hp=clamp(G.hp,0,G.hpMax); G.sanity=clamp(G.sanity,0,100);
+}
+function homeFlow(){
+ if(G.over) return renderEnding();
+ G.hp=clamp(G.hp,-99,G.hpMax); G.sanity=clamp(G.sanity,0,100); G.stamina=clamp(G.stamina,0,100);
+ if(G.hp<=0) return finishEnding(homeDeath(null));
+ if(G.min>=720) return homeDawn();
+ if(G.sanity<=0&&!G.flags.broke){ G.flags.broke=true; G.sanity=15; return toast("สติขาด","นั่งกอดเข่าอยู่ในมุมห้อง ได้ยินเสียงตัวเองพูดกับ"+G.w.n+"ที่ไม่ได้อยู่ตรงนั้น",()=>{ passTime(30); homeFlow(); }); }
+ if(G.stamina<=0&&!G.flags.dozed&&G.min>200){ G.flags.dozed=true; passTime(40); if(G.threat>60&&chance(.5)) return finishEnding(["dfall",7]); return toast("เผลอหลับ","ตาปิดไปเอง ตื่นมาอีกทีนาฬิกาเดินไปเกือบชั่วโมง หัวใจเต้นแรงจนเจ็บ ไม่มีอะไรเกิดขึ้น คราวนี้"); }
+ const e=G.hev.find(x=>!x.done&&x.t<=G.min); if(e){ e.done=true; return homeEvent(e.type); }
+ homeMenu();
+}
+function hEntryWord(k){ return {f:"ประตูหน้า",b:"ประตูหลัง",w:"หน้าต่างชั้นสอง"}[k]; }
+function hLevel(v){ return v>=3?"แน่นหนา":v===2?"พอกันได้":v===1?"ขวางไว้นิดหน่อย":"ไม่มีอะไรขวาง"; }
+function homeMenu(){
+ const R=HROOMS[G.room], ch=[], HERE="👀 ตรงนี้ทำอะไรได้", WALK="🚶 เดินไปห้องอื่น"; saveRun();
+ let text=tk(pick(R.d));
+ if(G.room==="upstairs"||G.room==="front") text+=`\n\n${pick(["ข้างนอกมีเสียงรถวิ่งผ่านช้าๆ ไม่จอด","มีคนตะโกนชื่อใครสักคนอยู่ไกลๆ","เงียบ เงียบจนได้ยินเสียงไฟถนนดังซ่า"])}`;
+ if(G.sanity<45&&chance(.4)) text+="\n\n"+pick(HALLU);
+ const nx=G.hev.find(x=>!x.done); if(G.flags.peekNext&&nx) text+=`\n\n👁️ จากที่แอบมองไว้ ${({knock:"มีคนเดินวนอยู่หน้าบ้าน เหมือนกำลังเลือกว่าจะเคาะบ้านไหน",test:"มีกลุ่มคนถือของแข็งเดินมาทางซอยนี้",scream:"บ้านฝั่งตรงข้ามประตูเปิดค้าง",fire:"มีควันลอยขึ้นจากบ้านที่ห่างไปสองหลัง",peeper:"มีเงาคนยืนนิ่งอยู่ใต้ไฟถนน",scam:"มือถือขึ้นเบอร์แปลกโทรเข้าหลายครั้งแต่ตัดไปเอง",dogs:"ได้ยินเสียงหมาหอนจากปากซอย",power:"ไฟถนนกะพริบถี่ผิดปกติ",grudge:"มีคนวิ่งเข้ามาในซอยแบบคนกำลังหนี",arrive:"มีคนวิ่งมาจากปากซอย",fake:"มีคนเดินมาจากปากซอย เดินแบบไม่รีบ",hostage:"มีรถตู้ไม่ติดป้ายจอดอยู่ปากซอย"})[nx.type]} น่าจะอีกราว ${Math.max(5,Math.round((nx.t-G.min)/5)*5)} นาที`;
+ G.flags.peekNext=false;
+ if(!G.searched[G.room]) ch.push({l:"🔍 ค้นห้องนี้",sec:HERE,sub:"15 นาที • อาจเจอของที่ใช้ได้",k:"search",go:homeSearch});
+ if(R.entry){ const v=G.house[R.entry]; if(v<3) ch.push({l:`🪑 ดันของขวาง${R.en}`,sec:HERE,sub:`20 นาที • ตอนนี้: ${hLevel(v)} • เหนื่อย`,k:"barricade",go:()=>homeBarricade(R.entry)}); }
+ if(G.room==="upstairs") ch.push({l:"👀 แอบมองถนนผ่านม่าน",sec:HERE,sub:"5 นาที • รู้ว่าอะไรกำลังมา",k:"lookout",go:()=>{ passTime(5); G.flags.peekNext=true; homeFlow(); }});
+ if(G.room==="attic") ch.push({l:"🫥 ดึงบันไดขึ้น ซ่อนรอ",sec:HERE,sub:"30 นาที • ถ้ามีคนพังเข้ามา หาตัวยาก",k:"hide",go:()=>{ passTime(30); G.hidden=true; G.sanity=clamp(G.sanity-2,0,100); G.noise=0; toast("ซ่อนตัว","นั่งกอดเข่าอยู่ในความมืดใต้หลังคา ฝุ่นเข้าจมูก ได้ยินเสียงบ้านทั้งหลังหายใจ"); }});
+ if(G.room==="living") ch.push({l:"🛏️ นอนพักบนโซฟา",sec:HERE,sub:"30 นาที • หายเหนื่อย แต่อาจเผลอหลับลึก",k:"rest",go:()=>{ passTime(30); G.stamina=clamp(G.stamina+40,0,100); G.sanity=clamp(G.sanity+4,0,100); const i=G.inv.indexOf("อาหารกระป๋อง"); if(i>=0){G.inv.splice(i,1);G.hp=clamp(G.hp+8,0,G.hpMax);} toast("พัก","หลับตาแต่ไม่ได้หลับ ทุกเสียงข้างนอกทำให้สะดุ้ง แต่ร่างกายได้พัก"); }});
+ if(G.room==="kitchen"&&(G.inv.includes("มีดพก")||G.inv.includes("มีดอีโต้"))&&!G.flags.spear) ch.push({l:"🔪 มัดมีดกับด้ามไม้กวาด ทำเป็นหอก",sec:HERE,sub:"15 นาที • อาวุธยาว แทงได้ก่อนมันถึงตัว",k:"craft",go:()=>{ passTime(15); G.flags.spear=true; const k=G.inv.includes("มีดพก")?"มีดพก":"มีดอีโต้"; G.inv.splice(G.inv.indexOf(k),1); giveItem("หอกด้ามไม้กวาด"); G.weapon="หอกด้ามไม้กวาด"; toast("ได้หอก","มัดด้วยเทปพันสายไฟจนแน่น ลองแทงอากาศสองที มือเริ่มนิ่งขึ้น"); }});
+ if(G.bleed>0||G.hp<G.hpMax*.85) ch.push({l:"🩹 ทำแผล",sec:HERE,sub:"15 นาที",k:"heal",go:aHeal});
+ ch.push({l:G.lights?"💡 ปิดไฟทั้งบ้าน":"💡 เปิดไฟ",sec:HERE,sub:G.lights?"มืด น่ากลัว แต่คนข้างนอกมองไม่เห็น":"สว่าง ใจชื้น แต่เห็นได้จากถนน",k:"lights",go:()=>{ G.lights=!G.lights; passTime(2); homeFlow(); }});
+ ch.push({l:"⏳ นั่งฟังเสียง รอเวลา",sec:HERE,sub:"20 นาที",k:"wait",go:()=>{ passTime(20); homeFlow(); }});
+ Object.keys(HROOMS).filter(k=>k!==G.room).forEach(k=>{ const r=HROOMS[k]; ch.push({l:`${r.ic} ${r.n}`,half:true,sec:WALK,sub:r.entry?hLevel(G.house[r.entry]):(G.searched[k]?"ค้นแล้ว":"ยังไม่ได้ค้น"),k:"spot",go:()=>{ G.room=k; G.hidden=false; passTime(2); homeFlow(); }}); });
+ const st=`<div class="panel" style="padding:10px 14px"><div class="small">🚪 ประตูหน้า: <b>${hLevel(G.house.f)}</b> • 🍳 ประตูหลัง: <b>${hLevel(G.house.b)}</b> • 🪟 หน้าต่าง: <b>${hLevel(G.house.w)}</b></div><div class="small" style="margin-top:4px">${G.lights?"💡 ไฟเปิดอยู่":"🌑 ปิดไฟมืดทั้งบ้าน"}${G.comps.length?" • อยู่ด้วยกัน: "+G.comps.map(c=>c.name).join(", "):""}</div></div>`;
+ show({ic:R.ic,loc:`🏠 ${R.n}`,text,html:st,k:"menu",choices:ch});
+}
+function homeSearch(){ passTime(15); G.searched[G.room]=1; const got=[]; HROOMS[G.room].loot.forEach(it=>{ if(it==="ปืนพก"&&!chance(.3)) return; if(chance(.75)){ const r=giveItem(it); if(r) got.push(r); } });
+ if(G.room==="living"&&chance(.5)){ const m=ri(200,900); G.money+=m; got.push(`เงิน ${m} บาท`); }
+ toast("🔍 ค้นห้อง",got.length?"เจอ: "+got.join(", "):"รื้อจนทั่ว ไม่มีอะไรที่ใช้ได้"); }
+function homeBarricade(k){ passTime(20); G.stamina=clamp(G.stamina-14,0,100); G.house[k]=Math.min(3,G.house[k]+1+(G.comps.some(c=>!c.dog)?1:0)); G.noise=clamp(G.noise+2,0,10);
+ toast("🪑 ขวาง"+hEntryWord(k),pick(["ลากตู้เสื้อผ้าครูดพื้นเสียงดังจนต้องหยุดฟังว่ามีใครได้ยินไหม","ตอกตะปูทับไม้กระดานเข้ากับวงกบ มือสั่นจนตอกพลาดสองที","เอาโต๊ะกินข้าวพลิกตะแคงยันไว้ แล้วเอาถังน้ำวางทับอีกชั้น"])+` (${hLevel(G.house[k])})`); }
+function homeEvent(type){ const F={betray:hBetray,knock:hKnock,test:hTest,scream:hScream,fire:hFire,peeper:hPeeper,scam:hScam,dogs:hDogs,power:hPower,grudge:hGrudge,arrive:hArrive,fake:hFake,hostage:hHostage}; (F[type]||homeMenu)(); }
+function hKnock(){ const VP=HVISIT.filter(v=>!(G.flags.vUsed||{})[v.who]), V=pick(VP.length?VP:HVISIT); (G.flags.vUsed=G.flags.vUsed||{})[V.who]=1; const pr=pOf(.5,"read"), good=chance(V.good);
+ const open=()=>{ G.flags.opened=(G.flags.opened||0)+1;
+  if(good){ G.flags.sheltered=(G.flags.sheltered||0)+1; G.helped++; if(G.comps.length<3) G.comps.push({name:V.ally,intro:"",motive:"จริงใจ",loyalty:75,hp:60,sk:"force"}); G.house.b=Math.min(3,G.house.b+1); return toast("รับเข้าบ้าน",V.gt); }
+  if(chance(.5)) return toast("เปิดผิดคน",V.bt,()=>startCombat("robber",{count:ri(1,2),name:"พวกที่ตามเข้ามา",desc:"ในห้องนั่งเล่นแคบๆ ไม่มีที่ให้หนี"}));
+  G.flags.badGuest=V.who; G.comps.push({name:V.ally,intro:"",motive:"แอบแฝง",loyalty:20,hp:60,traitor:true}); G.hev.push({t:G.min+ri(60,150),type:"betray"}); G.hev.sort((a,b)=>a.t-b.t); toast("รับเข้าบ้าน",V.gt.split(" ")[0]+" เข้ามาแล้ว เขาขอบคุณไม่หยุด แต่ตาเขามองประตูหลังบ่อยเกินไป"); };
+ show({loc:"🚪 เสียงเคาะประตู",ic:"✊",flash:true,text:`ก๊อก ก๊อก ก๊อก เสียงเคาะประตูหน้าบ้านดังขึ้นในความเงียบ\n\n${V.t}`,k:"card",timer:window.__BOT?0:12,onTimeout:()=>toast("ไม่ได้ขานรับ","ยืนนิ่งอยู่หลังประตูจนเสียงเคาะเงียบไป ไม่รู้ว่าเขาไปไหน"),choices:[
+  {l:"🔓 เปิดประตูให้",k:"card",go:open},
+  {l:"👂 คุยผ่านประตูก่อน ถามคำถามให้แน่ใจ",p:pr,k:"card",go:()=>{ passTime(5); if(chance(pr)) return toast("ฟังออก",good?"น้ำเสียงเขาจริงใจ ตอบทุกคำถามได้ ไม่มีเสียงคนอื่นอยู่ข้างหลัง":"ระหว่างที่เขาตอบ ได้ยินเสียงกระซิบอีกเสียงอยู่ข้างหลังเขา",()=>show({loc:"🚪 หน้าประตู",text:"เขายังรออยู่",k:"card",choices:[{l:"🔓 เปิด",k:"card",go:open},{l:"🔒 ไม่เปิด",k:"card",go:()=>{ if(good) G.sanity=clamp(G.sanity-6,0,100); toast("ไม่เปิด",good?"เสียงฝีเท้าค่อยๆ ห่างออกไป แล้วมีเสียงกรีดร้องดังมาจากปากซอย":"เสียงสบถดังขึ้นสองเสียง แล้วเดินจากไป"); }}]})); toast("ฟังไม่ออก","คำตอบเขาฟังขึ้นทุกข้อ แต่ใจยังไม่แน่",()=>show({loc:"🚪 หน้าประตู",text:"เขายังรออยู่ เคาะอีกครั้ง เบาๆ",k:"card",choices:[{l:"🔓 เปิด",k:"card",go:open},{l:"🔒 ไม่เปิด",k:"card",go:()=>toast("ไม่เปิด","เสียงฝีเท้าค่อยๆ ห่างออกไป")}]})); }},
+  G.inv.includes("ชุดปฐมพยาบาล")?{l:"💊 ส่งยาให้ผ่านช่องจดหมาย แต่ไม่เปิด",k:"card",go:()=>{ G.inv.splice(G.inv.indexOf("ชุดปฐมพยาบาล"),1); G.flags.sentMeds=true; G.karma+=2; toast("ส่งยาให้","มือข้างนอกคว้ายาไปจากช่อง “ขอบคุณ” เสียงฝีเท้าค่อยๆ ห่างไป"); }}:null,
+  {l:"🔒 ไม่เปิด ทำเป็นไม่มีคนอยู่",k:"card",go:()=>{ G.sanity=clamp(G.sanity-4,0,100); toast("ไม่เปิด","กลั้นหายใจจนเสียงเคาะเงียบไป"); }}]}); }
+function homeBreach(k,count,name){ G.flags.breached=k; G.house[k]=0;
+ if(G.hidden&&G.room==="attic"){ const ps=pOf(.55+(G.lights?0:.1),"sneak"); if(chance(ps)){ const lost=G.inv.splice(0,Math.ceil(G.inv.length/2)); G.weapon=G.inv.includes(G.weapon)?G.weapon:"มือเปล่า"; return toast("พวกมันพังเข้ามา",`ได้ยินเสียง${hEntryWord(k)}พังลง เสียงรื้อของทั้งบ้านดังอยู่ข้างล่างนานมาก มีคนหยุดยืนใต้บันไดพับ แล้วก็เดินออกไป${lost.length?"\n\nของในบ้านหายไปหลายอย่าง":""}`); } G.flags.foundAttic=true; return toast("มันเจอ","บันไดพับถูกดึงลงมาช้าๆ แสงไฟฉายส่องขึ้นมา",()=>startCombat("mask",{count,name,desc:"ใต้หลังคาแคบจนยืนตรงไม่ได้"})); }
+ toast(hEntryWord(k)+"พัง",`${hEntryWord(k)}พังลงมาพร้อมเสียงไม้แตก ${name}ทะลักเข้ามาในบ้าน`,()=>startCombat(k==="b"?"robber":"mask",{count,name,desc:G.lights?"ไฟในบ้านสว่าง เห็นหน้ากันชัดทุกคน":"ในความมืด เห็นแค่เงากับไฟฉาย"})); }
+function hTest(){ const k=pick(["f","f","b","b","w"]), need=ri(1,3)+(G.lights?1:0)+(["hell","dawn"].includes(phase().k)?1:0)+(G.rule.moreGangs?1:0), who=pick(["แก๊งหน้ากากยักษ์","เด็กแว้นสามคน","พวกปล้นสะดม","คนชุดขาว"]);
+ show({loc:"💥 มีคนพยายามเข้าบ้าน",ic:"🔨",flash:2,text:`เสียงทุบดังโครมที่${hEntryWord(k)} ${who}กำลังพยายามพังเข้ามา${G.lights?" พวกมันเห็นแสงไฟในบ้าน":""}\n\n${hEntryWord(k)}ตอนนี้: ${hLevel(G.house[k])}`,k:"card",timer:window.__BOT?0:10,onTimeout:()=>G.house[k]>=need?toast("มันถอยไป","ทุบอยู่พักใหญ่ แล้วเสียงก็เงียบ พวกมันไปลองบ้านอื่น"):homeBreach(k,ri(2,3),who),choices:[
+  {l:`🪑 วิ่งไปยัน${hEntryWord(k)}ไว้สุดแรง`,p:clamp((G.house[k]+1)/(need+.5),.1,.95),k:"card",go:()=>{ G.stamina=clamp(G.stamina-15,0,100); if(G.house[k]+1>=need||chance(.3)) return toast("ยันไว้ได้","ไหล่กระแทกประตูทุกครั้งที่มันทุบ ทุบอยู่นานจนเสียงเงียบ พวกมันไปลองบ้านอื่น"); homeBreach(k,ri(2,3),who); }},
+  {l:"📢 ตะโกนว่ามีปืน ใครเข้ามายิงทิ้ง",p:pOf(WEAPONS[G.weapon].gun&&G.ammo>0?.7:.4,"talk"),k:"card",go:()=>{ const p=pOf(WEAPONS[G.weapon].gun&&G.ammo>0?.7:.4,"talk"); if(chance(p)) return toast("มันลังเล",WEAPONS[G.weapon].gun&&G.ammo>0?"ยิงขึ้นฟ้าหนึ่งนัดผ่านหน้าต่าง เสียงทุบหยุดทันที แล้วก็เสียงฝีเท้าวิ่งหนี":"เสียงทุบหยุด เสียงกระซิบเถียงกันข้างนอก แล้วก็เดินจากไป"); homeBreach(k,ri(2,3),who); }},
+  {l:"🫥 วิ่งขึ้นไปซ่อนใต้หลังคา",k:"card",go:()=>{ G.room="attic"; G.hidden=true; passTime(3); if(G.house[k]>=need) return toast("มันถอยไป","ซ่อนอยู่ข้างบน ได้ยินเสียงทุบอยู่นาน แล้วก็เงียบ"); homeBreach(k,ri(2,3),who); }},
+  G.inv.includes("ลวดดัก")?{l:"🪤 ขึงลวดดักหลังประตู แล้วรอ",p:.7,k:"card",go:()=>{ G.inv.splice(G.inv.indexOf("ลวดดัก"),1); if(G.house[k]>=need) return toast("มันถอยไป","ประตูไม่พัง ลวดยังขึงรออยู่"); if(chance(.7)){ G.kills++; G.house[k]=0; return toast("ลวดทำงาน","ประตูพัง คนแรกที่พุ่งเข้ามาสะดุดลวดหน้าฟาดพื้น ที่เหลือเห็นแล้วถอยออกไป"); } homeBreach(k,ri(2,3),who); }}:null]}); }
+function hBetray(){ const c=G.comps.find(x=>x.traitor); if(!c) return homeFlow(); G.flags.betrayedHome=true; G.comps=G.comps.filter(x=>x!==c); G.betrayedCount++;
+ toast("คนที่รับเข้ามา",`ตอนตีสามได้ยินเสียงกลอนประตูหลังถูกปลดเบาๆ ${c.name}ยืนอยู่ตรงนั้น เปิดประตูให้คนข้างนอก`,()=>{ G._homeBetray=true; homeBreach("b",ri(2,3),"พวกของ"+c.name); }); }
+function hScream(){ show({loc:"😱 บ้านฝั่งตรงข้าม",flash:true,text:"เสียงกรีดร้องดังมาจากบ้านฝั่งตรงข้าม ผู้หญิงคนหนึ่งตะโกนชื่อลูกซ้ำๆ แล้วมีเสียงแก้วแตก เสียงหัวเราะผู้ชายสองคน",k:"card",choices:[
+  {l:"🏃 ออกไปช่วย",k:"fight",go:()=>{ G.flags.wentOut=true; startCombat("robber",{count:2,name:"พวกที่บุกบ้านตรงข้าม",onWin:"neighborSaved"}); }},
+  {l:"🔦 ส่องไฟ ตะโกนว่าแจ้งคนทั้งซอยแล้ว",p:pOf(.45,"talk"),k:"card",go:()=>{ if(chance(pOf(.45,"talk"))){ G.helped++; G.flags.savedNeighbor=true; return toast("มันหนีไป","สองคนนั้นวิ่งออกจากบ้านตรงข้าม เสียงร้องไห้ยังดังอยู่ แต่เป็นเสียงของคนที่ยังมีชีวิต"); } G.threat=clamp(G.threat+15,0,100); toast("มันหันมา","สองคนนั้นหันมามองบ้านหลังนี้ แล้วชี้"); }},
+  {l:"🙈 ปิดหู ไม่ยุ่ง",k:"card",go:()=>{ G.sanity=clamp(G.sanity+sanFx(-12),0,100); toast("ไม่ยุ่ง","เสียงกรีดร้องหยุดลงกะทันหัน ความเงียบหลังจากนั้นดังกว่าเสียงกรีดร้อง"); }}]}); }
+function neighborSaved(){ G.flags.savedNeighbor=true; G.helped++; G.karma+=3; toast("ช่วยไว้ได้","ผู้หญิงคนนั้นกอดลูกแน่น พูดขอบคุณไม่เป็นภาษา ตอนกลับเข้าบ้าน มือยังสั่นไม่หยุด"); }
+function hFire(){ show({loc:"🔥 ไฟไหม้บ้านข้างๆ",ic:"🔥",flash:2,text:"กลิ่นควันลอยเข้ามาทางช่องลม บ้านข้างๆ ไฟลุกท่วมแล้ว ลมพัดเข้าหาบ้านหลังนี้ ประกายไฟปลิวข้ามรั้ว",k:"card",timer:window.__BOT?0:10,onTimeout:()=>{ G.hp-=25; G.flags.fireHurt=true; toast("ควันเต็มบ้าน","สำลักควันจนล้มลงกับพื้น คลานไปหาหน้าต่างที่เปิดได้"); },choices:[
+  {l:"💧 เอาผ้าชุบน้ำอุดช่องลม ราดน้ำผนังฝั่งนั้น",p:.65,k:"card",go:()=>{ passTime(20); if(chance(.65)) return toast("ไฟไม่ข้ามมา","ราดน้ำจนมือชา ไฟไหม้บ้านข้างๆ จนเหลือแต่โครง แต่ไม่ข้ามรั้วมา"); G.hp-=18; toast("ไฟลามเข้าครัว","ไฟติดชายคาครัว ดับได้ แต่แขนพองเป็นแผลไหม้ ประตูหลังไหม้ไปครึ่งบาน",()=>{ G.house.b=Math.max(0,G.house.b-2); homeFlow(); }); }},
+  {l:"🪜 ปีนขึ้นหลังคา รอจนไฟสงบ",k:"card",go:()=>{ G.flags.roof=true; passTime(40); G.sanity=clamp(G.sanity-6,0,100); toast("บนหลังคา","นอนราบกับกระเบื้องร้อนๆ มองไฟกินบ้านข้างๆ มองเห็นทั้งเมืองจากตรงนี้ มีไฟอีกหลายจุด"); }},
+  {l:"🏃 หนีออกจากบ้าน ไปหลบที่อื่นชั่วคราว",k:"card",go:()=>{ passTime(30); return startCombat("robber",{count:1,name:"คนที่รออยู่ในซอย",desc:"ทันทีที่ออกมา มีคนเดินออกมาจากเงามืด"}); }}]}); }
+function hPeeper(){ show({loc:"🪟 หน้าต่าง",flash:true,text:`มีหน้าคนแนบอยู่กับกระจกหน้าต่าง ${G.lights?"แสงไฟในบ้านส่องให้เห็นชัด ตาเขามองตรงมาที่":"ในความมืด เห็นแค่ลมหายใจเป็นฝ้าบนกระจก กับตาที่สะท้อนแสงไฟถนน มองตรงมาที่"}${me()} แล้วยิ้ม`,k:"card",choices:[
+  {l:"💡 ปิดไฟ แล้วถอยห่างจากหน้าต่าง",k:"card",go:()=>{ G.lights=false; G.threat=Math.max(0,G.threat-5); toast("มืด","พอไฟดับ ใบหน้านั้นก็ค่อยๆ ถอยออกไปจากกระจก ทิ้งรอยฝ้าไว้เป็นรูปมือ"); }},
+  {l:"🔪 ชูอาวุธให้เห็น",k:"card",go:()=>{ if(chance(.55)) return toast("มันไป","มันมองอาวุธ แล้วหัวเราะเบาๆ เดินจากไป"); G.hev.push({t:G.min+ri(30,60),type:"test"}); G.hev.sort((a,b)=>a.t-b.t); toast("มันชอบ","มันพยักหน้าช้าๆ เหมือนตกลงอะไรบางอย่างกับตัวเอง แล้วเดินไปทางหลังบ้าน"); }},
+  {l:"🧊 นิ่ง ไม่ขยับ ไม่สบตา",k:"card",go:()=>{ G.sanity=clamp(G.sanity+sanFx(-10),0,100); G.flags.marked=G.lights; toast("มันยืนอยู่นาน","มันยืนอยู่ตรงนั้นสิบนาที ไม่ขยับเลย แล้วก็หายไป ตอนเช้าจะเห็นว่ามันพ่นสีอะไรไว้ที่รั้ว"); }}]}); }
+function hScam(){ show({loc:"📞 เบอร์แปลก",ic:"📳",flash:2,text:`เบอร์ที่ไม่รู้จักโทรเข้า เสียงผู้ชายพูดเรียบๆ “${G.w.n}${G.w.name?" "+G.w.name:""}อยู่กับเรา โอนมาห้าพัน ไม่งั้นพรุ่งนี้ไปรับศพ”`,k:"card",choices:[
+  G.money>=500?{l:"💸 โอนให้",k:"card",go:()=>{ G.money=Math.max(0,G.money-5000); G.sanity=clamp(G.sanity-6,0,100); toast("โอนแล้ว","สายตัดไปทันทีที่เงินเข้า ไม่มีคำยืนยัน ไม่มีอะไรเลย"); }}:null,
+  {l:`🗣️ ขอคุยกับ${G.w.n}ก่อน`,k:"card",go:()=>{ G.flags.scamCaught=true; toast("ไม่มีใคร","“เดี๋ยวให้คุย” แล้วสายก็เงียบ ผ่านไปนาทีหนึ่งก็ตัดไป มันไม่มีใครอยู่กับมันหรอก"); }},
+  {l:"📵 วางสาย",k:"card",go:()=>{ G.sanity=clamp(G.sanity-4,0,100); toast("วางสาย","มือยังสั่นอยู่อีกนาน ถึงจะรู้ว่าน่าจะโกหก"); }}]}); }
+function hDogs(){ if(G.house.b>=2) return toast("หมาข่วนประตู","เสียงหมาหลายตัวข่วนประตูหลัง หอนอยู่พักใหญ่ แต่ประตูที่ขวางไว้ไม่ขยับ"); toast("หมาเข้าครัว","ประตูหลังที่ขวางไว้ไม่แน่นพอ ฝูงหมาที่มีคนปล่อยมาดันจนแง้ม แล้วมุดเข้ามา",()=>startCombat("dogs")); }
+function hPower(){ G.lights=false; G.flags.blackout=true; G.sanity=clamp(G.sanity-6,0,100); toast("ไฟดับ","ไฟดับทั้งซอยพร้อมกัน ตู้เย็นเงียบ นาฬิกาดิจิทัลดับ ความมืดหนักจนเหมือนจับต้องได้ ข้างนอกมีเสียงเฮดังขึ้นจากหลายบ้าน"); }
+function hGrudge(){ const g=G.grudges.find(x=>!x.shown)||{who:"คนที่เคยมีเรื่องกัน"}; g.shown=true;
+ show({loc:"🚪 คนที่ไม่อยากเจอ",flash:true,text:`เสียงทุบประตูรัว พอแอบมองตาแมว คนที่ยืนอยู่หน้าบ้านคือ${g.who} เลือดเต็มหน้า ปากซอยมีไฟฉายหลายดวงกำลังส่องหา\n\n“เปิดให้กูเข้าไป” เขาพูดลอดประตู “กูรู้ว่ามึงเกลียดกู กูก็เกลียดมึง แต่ถ้าพวกมันเจอกูหน้าบ้านมึง มันก็จะเข้าบ้านมึงด้วย”`,k:"card",timer:window.__BOT?0:10,onTimeout:()=>{ G.threat=clamp(G.threat+15,0,100); toast("ไม่ได้เปิด","เสียงทุบเงียบไป แล้วก็เสียงฟาด เสียงร้อง พวกมันยืนอยู่หน้าบ้านนานกว่าที่ควร"); },choices:[
+  {l:"🤝 เปิดให้เข้ามา แล้วช่วยกันยันประตู",k:"fight",go:()=>{ g.done=true; G.flags.grudgeAlly=true; G.comps.push({name:"ศัตรูเก่า",intro:"",motive:"จริงใจ",loyalty:60,hp:70,sk:"force"}); toast("ทั้งสองคนยันประตู","เขาพุ่งเข้ามา ช่วยกันดันตู้ทับประตูทันก่อนพวกข้างนอกถึงหน้าบ้าน",()=>startCombat("mask",{count:2,name:"พวกที่ตามเขามา",desc:"มันพังหน้าต่างข้างประตูเข้ามาได้สองคน"})); }},
+  {l:"🔓 เปิดให้หลบ แต่ไม่คุยด้วย",k:"card",go:()=>{ g.done=true; G.flags.grudgeTruce=true; if(chance(.2)){ G.flags.badGuest="ศัตรูเก่า"; G.comps.push({name:"ศัตรูเก่า",intro:"",motive:"แอบแฝง",loyalty:15,hp:60,traitor:true}); G.hev.push({t:G.min+ri(60,140),type:"betray"}); G.hev.sort((a,b)=>a.t-b.t); } else G.comps.push({name:"ศัตรูเก่า",intro:"",motive:"จริงใจ",loyalty:40,hp:60}); toast("อยู่กันคนละมุม","เขานั่งมุมหนึ่ง "+me()+"นั่งอีกมุม ไม่มีใครพูดอะไร ไฟฉายข้างนอกส่องผ่านหน้าบ้านไปแล้ววนกลับมาอีกรอบ"); }},
+  {l:"🔒 ไม่เปิด",k:"card",go:()=>{ g.deep=true; G.sanity=clamp(G.sanity+sanFx(-10),0,100); toast("ไม่เปิด","เขาสาปแช่งผ่านประตูจนเสียงแหบ แล้วเสียงนั้นก็ถูกลากห่างออกไป"); }}]}); }
+function hArrive(){ const W=G.w.n+(G.w.name?" "+G.w.name:""), pc=G.phoneBat>0;
+ const letIn=checked=>{ G.trIn=true; G.flags.codeChecked=checked; G.sanity=clamp(G.sanity+30,0,100); G.comps.push({name:W,intro:"",motive:"จริงใจ",loyalty:100,hp:ri(35,70),tr:true}); toast("กลับมาแล้ว",`${W}ล้มเข้ามาในบ้าน ตัวเปื้อนฝุ่นกับเลือด แต่ยังหายใจ ${G.w.i==="กู"?"“กูบอกแล้วว่ากูจะมา”":"กอดกันแน่นจนเจ็บ"} ปิดประตู ล็อก ดันตู้ทับอีกรอบ`); };
+ show({loc:"🚪 เคาะสามที",ic:"✊",flash:2,text:`ก๊อก ก๊อก ก๊อก สามทีพอดี แล้วเสียงหอบเหนื่อยลอดประตูเข้ามา “${G.w.you} ${G.w.i}เอง เปิดหน่อย มีคนตามมา”\n\nเสียงเหมือน${W}ทุกอย่าง`,k:"card",timer:window.__BOT?0:12,onTimeout:()=>{ G.flags.refusedReal=true; toast("ไม่ทันเปิด","มัวแต่ลังเล เสียงข้างนอกเงียบไป แล้วมีเสียงวิ่งห่างออกไป"); },choices:[
+  {l:"🔓 เปิดเลย",k:"card",go:()=>letIn(false)},
+  {l:"🔐 ถามรหัสลับก่อน",k:"card",go:()=>{ passTime(2); toast("รหัส",`“${G.secretCode}” ตอบทันทีไม่ลังเล ถูกต้อง`,()=>letIn(true)); }},
+  {l:"🔒 ไม่เปิด อาจเป็นตัวปลอม",k:"card",go:()=>{ G.flags.refusedReal=true; G.sanity=clamp(G.sanity+sanFx(-15),0,100); toast("ไม่เปิด",`ได้ยินเสียง${W}เรียกอยู่หน้าบ้านนานมาก แล้วค่อยๆ เบาลง จนเงียบ`); }}]}); }
+function hFake(){ const W=G.w.n+(G.w.name?" "+G.w.name:""), wrong=(G.secretCode+ri(11,88))%900+100;
+ const fight=()=>{ G.flags.openedFake=true; startCombat("mask",{count:3,name:"คนที่ใช้เสียง"+G.w.n,desc:"ข้างหลังเสียงที่คุ้นเคย มีคนอีกสองคนยืนรออยู่ คนหนึ่งถือมือถือของ"+G.w.n,onWin:"fakeWin"}); };
+ show({loc:"🚪 เคาะสามที",ic:"✊",flash:2,text:`ก๊อก ก๊อก ก๊อก สามที เสียงลอดประตูเข้ามา “${G.w.you} เปิดหน่อย ${G.w.i}มาแล้ว”\n\nเสียงเหมือน${W} แต่${G.flags.fakeMsg?"ข้อความช่วงหลังๆ ในแชตห้วนแปลกๆ ":"เหนื่อยน้อยไปหน่อยสำหรับคนที่เดินมาเป็นร้อยกิโล"}`,k:"card",timer:window.__BOT?0:12,onTimeout:()=>{ G.flags.fakeRefused=true; toast("ไม่ได้เปิด","เสียงข้างนอกเงียบไป แล้วเสียงหัวเราะเบาๆ หลายเสียง"); },choices:[
+  {l:"🔓 เปิดเลย",k:"card",go:fight},
+  {l:"🔐 ถามรหัสลับก่อน",k:"card",go:()=>{ passTime(2); toast("รหัส",`เงียบไปนานผิดปกติ แล้วตอบว่า “${wrong}”\n\nไม่ใช่ ${G.secretCode}`,()=>show({loc:"🚪 หน้าประตู",flash:true,text:"รหัสผิด ข้างนอกยังยืนรออยู่ ได้ยินเสียงกระซิบกันสองเสียง",k:"card",choices:[{l:"🔒 ไม่เปิดเด็ดขาด",k:"card",go:()=>{ G.flags.fakeRefused=true; toast("ไม่เปิด","“ฉลาดนี่” เสียงข้างนอกเปลี่ยนเป็นเสียงผู้ชายแปลกหน้า แล้วฝีเท้าหลายคู่ก็เดินจากไป"); }},{l:"🔓 เปิดอยู่ดี อาจจำผิด",k:"card",go:fight}]})); }},
+  {l:"🔒 ไม่เปิด",k:"card",go:()=>{ G.flags.fakeRefused=true; toast("ไม่เปิด","ข้างนอกเรียกอีกสองครั้ง แล้วเงียบ"); }}]}); }
+function fakeWin(){ G.flags.fakeBeaten=true; toast("ไม่ใช่"+G.w.n,"ในกระเป๋าคนที่ล้มอยู่มีมือถือของ"+G.w.n+" หน้าจอยังเปิดแชตกับเราค้างไว้"); }
+function hHostage(){ const W=G.w.n+(G.w.name?" "+G.w.name:"");
+ show({loc:"🚐 หน้าบ้าน",ic:"⛓️",flash:2,text:`รถตู้ไม่ติดป้ายจอดหน้าบ้าน ประตูเลื่อนเปิด ${W}ถูกลากลงมา มือถูกมัด ปากถูกปิดเทป มีปืนจ่อหัว\n\nเสียงตะโกนจากข้างนอก “เปิดประตู แล้วเอาของมีค่าทั้งหมดออกมา แลกกัน”`,k:"card",timer:window.__BOT?0:12,onTimeout:()=>{ G.flags.hostageLost=true; G.tr.fate="dead"; toast("ไม่ตอบ","รอไม่นาน รถตู้ก็ปิดประตู แล้วขับออกไปพร้อม"+G.w.n); },choices:[
+  {l:"🔓 เปิดประตู แลกทุกอย่าง",k:"card",go:()=>{ G.flags.hostageTrade=true; G.money=0; G.inv=G.inv.filter(x=>WEAPONS[x]); G.trIn=true; G.comps.push({name:W,intro:"",motive:"จริงใจ",loyalty:100,hp:40,tr:true}); toast("แลกแล้ว","พวกมันขนของไปทุกอย่างที่ขนได้ ถีบ"+G.w.n+"เข้ามาในบ้าน แล้วขับออกไปหัวเราะ บ้านโล่ง แต่คนครบ"); }},
+  (WEAPONS[G.weapon].gun&&G.ammo>0)?{l:"🔫 ยิงจากหน้าต่างชั้นสอง",p:pOf(.45,"gun"),k:"card",go:()=>{ G.ammo--; if(chance(pOf(.45,"gun"))){ G.kills++; G.trIn=true; G.flags.fought=true; G.comps.push({name:W,intro:"",motive:"จริงใจ",loyalty:100,hp:45,tr:true}); return toast("ยิงถูก","คนที่ถือปืนจ่อหัวล้มลง ที่เหลือแตกฮือขึ้นรถหนี "+G.w.n+"คลานมาถึงประตูบ้าน"); } G.flags.hostageLost=true; G.tr.fate="dead"; toast("พลาด","กระสุนพลาด เสียงปืนนัดที่สองดังจากข้างล่าง ไม่ใช่ของเรา"); }}:null,
+  {l:"🔒 ไม่เปิด อาจเป็นกับดัก",k:"card",go:()=>{ G.flags.hostageLost=true; G.tr.fate="dead"; G.sanity=clamp(G.sanity+sanFx(-25),0,100); toast("ไม่เปิด","รถตู้ปิดประตู ขับออกไปช้าๆ ก่อนพ้นซอย"+G.w.n+"หันมามองบ้านผ่านกระจกหลังเป็นครั้งสุดท้าย"); }}]}); }
+function homeChatSend(kind){ const T=TRAV[G.w.tone], tr=G.tr, dead=(tr.fate==="dead"&&G.min>=tr.deadAt)||G.flags.hostageLost, fake=tr.fate==="impostor"&&G.min>=tr.fakeAt-130;
+ if(G.rule.noSignal&&chance(.4)){ pushChat("me","(ส่งไม่ออก ไม่มีสัญญาณ)"); return; } G.phoneBat=clamp(G.phoneBat-1,0,100);
+ const say={where:"ถึงไหนแล้ว ปลอดภัยไหม",code:"รหัสลับเราคือเลขอะไร",adv:"อย่าผ่านสะพาน อ้อมไปทางคลอง ได้ยินว่าแก๊งยึดสะพานไว้",cheer:"อดทนไว้ ทางนี้รออยู่ ไม่หลับแน่นอน"}[kind]; pushChat("me",say);
+ if(dead) return later(()=>pushChat("me","(ส่งแล้ว ยังไม่อ่าน)"));
+ later(()=>{ if(kind==="where") pushChat("them",fake?pick(T.fake):`อีกประมาณ ${Math.max(3,Math.round(tr.km*(1-G.min/(tr.fate==="arrive"?tr.arriveAt:760))))} โล`,true);
+  else if(kind==="code") pushChat("them",fake?String((G.secretCode+ri(11,88))%900+100):String(G.secretCode),true);
+  else if(kind==="adv"){ if(!G.flags.advised){ G.flags.advised=true; if(tr.fate==="dead"&&G.min<tr.deadAt-30&&chance(.45)){ tr.fate="arrive"; tr.arriveAt=clamp(G.min+ri(150,260),G.min+60,690); G.tl=G.tl.filter(x=>x[2]!=="last"&&x[0]<=G.min); G.hev.push({t:tr.arriveAt,type:"arrive"}); G.hev.sort((a,b)=>a.t-b.t); } } pushChat("them",fake?"ครับ ขอบคุณครับ":pick(["โอเค จะอ้อมไป ขอบใจนะ","ดีที่บอก เมื่อกี้กำลังจะไปทางนั้นพอดี"]),true); }
+  else pushChat("them",fake?"ครับ":pick(["ไม่ต้องห่วง","ขอบคุณที่รอนะ","อีกนิดเดียว"]),true); }); }
+function homeDeath(e){ const f=G.flags;
+ if(G._homeBetray) return ["dfall",6];
+ if(f.openedFake) return ["ddoor",1];
+ if(f.foundAttic&&G.room==="attic") return ["dfall",1];
+ if(f.fireHurt&&chance(.6)) return ["dfall",2];
+ if(f.marked&&chance(.5)) return ["dfall",8];
+ if(G.lights&&chance(.4)) return ["dfall",3];
+ if(f.breached==="b") return ["dfall",chance(.5)?0:5];
+ if(G.stamina<10) return ["dfall",7];
+ return ["dfall",pick([0,5,8])];
+}
+function homeDawn(){ const f=G.flags, tr=G.tr, inside=G.comps.some(c=>c.tr), gl=G.comps.filter(c=>!c.tr&&!c.dog&&!c.traitor).length; let r;
+ G.arrived=true;
+ if(f.hostageTrade) return finishEnding(["ddoor",6]);
+ if(inside){ r=pickUnseen("dhome",[0,f.codeChecked?4:-1,gl>=1?8:-1,f.fought||G.kills>=2?6:-1]); return finishEnding(r); }
+ if(G.trIn) return finishEnding(["dfall",4]);
+ if(f.refusedReal) return finishEnding(["ddoor",2]);
+ if(f.fakeRefused) return finishEnding(["ddoor",0]);
+ if(f.fakeBeaten||f.hostageLost||tr.fate==="dead") return finishEnding(chance(.75)?["dfall",4]:["dfall",9]);
+ const opts=[]; if((f.sheltered||0)>=2) opts.push(["ddoor",9]); if(f.grudgeAlly) opts.push(["ddoor",5]); if(f.grudgeTruce) opts.push(["ddoor",4]); if(f.sentMeds) opts.push(["ddoor",7]); if(f.sheltered) opts.push(["ddoor",3],["dhome",2]);
+ if(f.savedNeighbor) opts.push(["dhome",7]); if(f.roof) opts.push(["dhome",5]); if(!f.breached&&G.house.f>=3&&G.house.b>=3) opts.push(["dhome",1]); if(G.kills>=2) opts.push(["dhome",6]);
+ opts.push(["dhome",3],["dhome",9]);
+ const un=opts.filter(o=>!META.endings[o[0]+":"+o[1]]); finishEnding(pick(un.length&&chance(.75)?un:opts));
+}
+
+function hudHome(){
+ const ph=phase(), tleft=Math.max(0,720-G.min), full=clamp(Math.ceil(G.hp/G.hpMax*5),0,5), hs="❤️".repeat(full)+"🖤".repeat(5-full), W=WEAPONS[G.weapon], st=[];
+ if(G.bleed) st.push("🩸 เลือดไหล ต้องทำแผล"); if(G.stamina<25) st.push("😮‍💨 เหนื่อยมาก"); if(G.sanity<35) st.push("😵 สติจะหลุด"); if(G.phoneBat<=10) st.push(G.phoneBat<=0?"📵 มือถือดับ":"🪫 แบตใกล้หมด"); if(G.lights) st.push("💡 ไฟเปิด มองเห็นจากถนน");
+ const last=G.chatlog.filter(m=>m.side==="them").slice(-1)[0], inside=G.comps.some(c=>c.tr);
+ return `<div class="hud"><div class="hud-top"><span class="clock">🕐 ${hhmm(Math.max(0,G.min))}</span><span class="small">อีก ${Math.floor(tleft/60)} ชม. ${Math.round(tleft%60)} น. ฟ้าสาง</span><span class="night-badge ${ph.cls}">${ph.label}</span></div>
+ <div class="road"><div class="road-fill" style="width:${clamp(G.min/720*100,0,100)}%"></div><span class="road-km">${inside?"🏠 "+G.w.n+"อยู่ในบ้านแล้ว":"📱 "+G.w.n+": "+(last?(last.txt.length>26?last.txt.slice(0,26)+"…":last.txt)+" ("+last.t+")":"ยังไม่มีข่าว")}</span></div>
+ <div class="hud-row"><span class="hearts">${hs}</span><span class="gear"><span>🏠 ${HROOMS[G.room].n}</span><span>${itemIc(G.weapon)} ${G.weapon}${W.gun?` ×${G.ammo}`:""}</span></span></div>
+ ${st.length?`<div class="status">${st.map(x=>`<span>${x}</span>`).join("")}</div>`:""}</div>`;
+}
 //========================= BOT (smoke test) =========================
 window.runBot=function(n,smart){ window.__BOT=true; const out={ends:{},err:[],stuck:0,arr:0,alive:0,n};
  for(let r=0;r<n;r++){ try{ newRun(chance(.5)?"m":"f",false); window.__prep(); let st=0;

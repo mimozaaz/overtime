@@ -127,8 +127,49 @@ input,button{font-family:inherit}
 .stat .sl{font-size:11px;white-space:nowrap;margin-right:4px}
 .choices .btn{font-size:15.5px}.cost{font-size:12.5px;line-height:1.45}
 .btn.ghost.sm{text-align:center;padding-right:15px}
+
+/* ===== v3 UI: เข้าใจง่าย ===== */
+.hearts{font-size:17px;letter-spacing:1px;white-space:nowrap}
+.hud-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.gear{font-size:13px;color:var(--ink);display:flex;gap:10px;flex-wrap:wrap}
+.status{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.status span{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:#2a0e12;color:#ff8a95;border:1px solid #5a1820}
+.road{height:14px}.road-km{top:0;font-size:11px}
+.sec{font-size:13px;font-weight:800;color:var(--amber);margin:16px 2px 2px}
+.choices .btn .tic{font-size:26px;float:left;margin:-2px 10px 0 -2px;line-height:1.2}
+.choices .btn.route{padding:13px 14px;min-height:64px;padding-right:14px}
+.choices .btn.route.primary .cost{color:#ffe0e3}
+.bdg{font-style:normal;font-size:11px;background:#1f4a2c;color:#bff5cf;border-radius:20px;padding:1px 8px;margin-left:6px;vertical-align:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0}
+.grid2 .btn{margin:0;text-align:center!important;padding:12px 8px!important;font-size:14.5px!important}
+.grid2 .btn .tic{float:none;display:block;margin:0 0 2px;font-size:24px}
+.grid2 .btn .cost{font-size:11.5px}
+.choices .cost{white-space:pre-line}
+.rowx{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.rowx .btn{flex:1 1 30%;margin:0;font-size:13px!important;padding:9px 6px!important;text-align:center!important}
+.risk{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:20px;background:#2a1a10;color:var(--amber);white-space:nowrap}
+.risk.hi{background:#12301c;color:var(--green)}.risk.lo{background:#3a0e14;color:#ff8a95}
+.choices .btn{padding-right:86px}
+.trip{display:flex;align-items:center;gap:3px;justify-content:space-between;font-size:13px;margin:4px 0 2px}
+.trip i{flex:1;height:3px;background:#3a262b;border-radius:2px}.trip i.d{background:var(--red)}
+.trip b{font-size:15px}
+.trip-cap{display:flex;justify-content:space-between;font-size:11px;color:var(--dim)}
+.scene-ic{font-size:44px;text-align:center;line-height:1.1;margin:2px 0 4px}
+.foe{display:flex;align-items:center;gap:10px;margin:10px 0 2px}
+.foe .fic{font-size:40px}.foe .fb{flex:1}
+.foe .fbar{height:10px;background:#241317;border-radius:6px;overflow:hidden;margin-top:4px}
+.foe .fbar>i{display:block;height:100%;background:linear-gradient(90deg,#b0121f,#ff2b3d);transition:width .4s}
+#notif{position:fixed;top:8px;left:50%;transform:translate(-50%,-140%);width:calc(100% - 20px);max-width:500px;z-index:90;background:rgba(28,18,22,.97);border:1px solid #5a2a32;border-radius:16px;padding:10px 14px;box-shadow:0 8px 30px rgba(0,0,0,.6);transition:transform .35s;cursor:pointer}
+#notif.on{transform:translate(-50%,0)}
+#notif .nt{font-size:11px;color:var(--dim)}#notif .nb{font-size:14px;margin-top:2px}
+.howto{background:#100a0c;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:10px 0;text-align:left;font-size:14px;line-height:1.7}
+.howto b{color:var(--amber)}
+.who{font-size:20px;font-weight:900;margin:4px 0}
+.pick-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pick-grid .btn{margin:0;font-size:14px;padding:12px 6px;text-align:center}
+.pick-grid .btn .tic{display:block;font-size:24px}
 </style></head><body>
-<div class="scrim-red" id="scrim"></div><div id="app"></div><div id="side" style="display:none;padding:14px 14px 90px"></div>
+<div class="scrim-red" id="scrim"></div><div id="notif"></div><div id="app"></div><div id="side" style="display:none;padding:14px 14px 90px"></div>
 <div class="navbar" id="nav" style="display:none">
 <button data-tab="game" class="on"><span class="ic">🩸</span>คืนนี้</button>
 <button data-tab="chat"><span class="ic">💬</span><span id="navWho">แชต</span><span class="badge-n" id="chatBadge" style="display:none">!</span></button>
@@ -1083,28 +1124,38 @@ function giveItem(it){
 //========================= UI CORE =========================
 let _tm=null;
 function clearTimer(){ if(_tm){clearInterval(_tm);_tm=null;} }
-function pctSpan(p){ p=clamp(Math.round(p*100),1,99);
+function pctSpan(p){
  if(G.noMercy) return "";
- if(G.sanity<30) return `<span class="pct">${p>=60?"น่าจะได้":p>=40?"ไม่แน่ใจ":"ไม่น่ารอด"}</span>`;
- return `<span class="pct ${p>=65?"hi":p<40?"lo":""}">${p}%</span>`; }
+ if(G.sanity<30) return `<span class="risk">❔ ไม่แน่ใจ</span>`;
+ return p>=.65?`<span class="risk hi">น่าจะได้</span>`:p>=.42?`<span class="risk">ลุ้น</span>`:`<span class="risk lo">เสี่ยงมาก</span>`;
+}
+function vehIc(v){ v=v||G.veh; return v==="เดินเท้า"?"🚶":v==="จักรยาน"?"🚲":v==="มอไซค์"?"🏍️":v==="เรือหางยาว"?"🚤":v==="ซาเล้ง"?"🛺":v==="รถพยาบาล"?"🚑":v==="รถตู้"?"🚐":v==="กระบะ"?"🛻":"🚗"; }
+function itemIc(x){ const w=WEAPONS[x]; if(w) return w.gun?"🔫":w.throw?(w.lure?"🧨":"🍾"):x==="มือเปล่า"?"👊":x==="หน้าไม้"?"🏹":"🗡️";
+ return {"ชุดปฐมพยาบาล":"🩹","ขวดน้ำ":"💧","อาหารกระป๋อง":"🥫","พาวเวอร์แบงก์":"🔋","ไฟฉาย":"🔦","ยาแก้อักเสบ":"💊","ยากระตุ้น":"💉","ผ้าใบ":"🟫","ลวดดัก":"🪤","ลูกหน้าไม้":"🏹","แกลลอนน้ำมัน":"⛽"}[x]||"📦"; }
 function hud(){
- const ph=phase(), total=G.map.km, left=kmLeft(), pc=clamp((1-left/total)*100,0,100);
- const bar=(ic,nm,v,max,c)=>`<span class="stat"><span class="sl">${ic} ${nm}</span><span class="bar"><i style="width:${clamp(v/max*100,0,100)}%;background:${c}"></i></span></span>`;
- const tleft=Math.max(0,720-G.min), gun=WEAPONS[G.weapon].gun||G.ammo>0;
- const w=[G.bleed?"🩸 เลือดไหล (ต้องทำแผล)":"",G.infection?"🦠 แผลติดเชื้อ":"",G.legHurt?"🦴 ขาเจ็บ":"",G.armHurt?"✋ มือเจ็บ":"",G.drugAddict?"💉 ลงแดง":"",G.noise>=6?"🔊 เสียงดัง มีคนได้ยิน":""].filter(Boolean).join(" • ");
- return `<div class="hud"><div class="hud-top"><span class="clock">🕐 ${hhmm(Math.max(0,G.min))}</span><span class="small">เหลือเวลา ${Math.floor(tleft/60)} ชม. ${Math.round(tleft%60)} น.</span><span class="night-badge ${ph.cls}">${ph.label}</span></div>
- <div class="road"><div class="road-fill" style="width:${pc}%"></div><span class="road-km">ถึง 🏠 อีก ${left} กม.</span></div>
- <div class="stats">${bar("❤️","เลือด",G.hp,G.hpMax,"#ff2b3d")}${bar("⚡","แรง",G.stamina,100,"#ffb039")}${bar("🧠","สติ",G.sanity,100,"#4fb0ff")}</div>
- <div class="stats" style="margin-top:6px"><span class="stat">${G.veh==="เดินเท้า"?"🚶":"🚗"} ${G.veh}${VEHS[G.veh].fuel?` ⛽${Math.round(G.fuel)}%`:""}</span><span class="stat">🗡️ ${G.weapon}${gun?` 🔫${G.ammo}`:""}</span><span class="stat">💰${G.money}</span><span class="stat">🔋${Math.round(G.phoneBat)}%</span></div>
- ${w?`<div class="wounds">${w}</div>`:""}</div>`;
+ const ph=phase(), total=G.map.km, left=kmLeft(), pc=clamp((1-left/total)*100,0,100), tleft=Math.max(0,720-G.min);
+ const full=clamp(Math.ceil(G.hp/G.hpMax*5),0,5), hs="❤️".repeat(full)+"🖤".repeat(5-full);
+ const W=WEAPONS[G.weapon], st=[];
+ if(G.bleed) st.push("🩸 เลือดไหล ต้องทำแผล"); if(G.stamina<25) st.push("😮‍💨 เหนื่อยมาก"); if(G.sanity<35) st.push("😵 สติจะหลุด");
+ if(G.legHurt) st.push("🦴 ขาเจ็บ"); if(G.armHurt) st.push("✋ มือเจ็บ"); if(G.infection) st.push("🦠 แผลติดเชื้อ"); if(G.noise>=6) st.push("🔊 มีคนได้ยินเรา");
+ if(VEHS[G.veh].fuel&&G.fuel<20) st.push("⛽ น้ำมันใกล้หมด"); if(G.phoneBat<=10) st.push(G.phoneBat<=0?"📵 มือถือดับ":"🪫 แบตใกล้หมด"); if(G.drugAddict&&!G.flags.adrenaline) st.push("💉 ลงแดง");
+ return `<div class="hud"><div class="hud-top"><span class="clock">🕐 ${hhmm(Math.max(0,G.min))}</span><span class="small">อีก ${Math.floor(tleft/60)} ชม. ${Math.round(tleft%60)} น. ฟ้าสาง</span><span class="night-badge ${ph.cls}">${ph.label}</span></div>
+ <div class="road"><div class="road-fill" style="width:${pc}%"></div><span class="road-km">🏠 อีก ${left} กม.</span></div>
+ <div class="hud-row"><span class="hearts">${hs}</span><span class="gear"><span>${vehIc()} ${G.veh}</span><span>${itemIc(G.weapon)} ${G.weapon}${W.gun?` ×${G.ammo}`:""}</span></span></div>
+ ${st.length?`<div class="status">${st.map(x=>`<span>${x}</span>`).join("")}</div>`:""}</div>`;
 }
 let _snap=null;
 function deltaChips(){
  const cur={rid:G.rid,hp:G.hp,st:G.stamina,sa:G.sanity,min:G.min,money:G.money,fuel:G.fuel,am:G.ammo}; const p=_snap; _snap=cur;
  if(!p||p.rid!==cur.rid) return "";
- const c=[], f=(ic,d,unit,goodUp)=>{ d=Math.round(d); if(!d)return; c.push(`<span class="dchip ${(d>0)===goodUp?"g":"b"}">${ic} ${d>0?"+":""}${d}${unit||""}</span>`); };
- f("❤️",cur.hp-p.hp,"",true); f("⚡",cur.st-p.st,"",true); f("🧠",cur.sa-p.sa,"",true); f("💰",cur.money-p.money,"",true); if(VEHS[G.veh].fuel)f("⛽",cur.fuel-p.fuel,"",true); f("🔫",cur.am-p.am,"",true);
- const dm=Math.round(cur.min-p.min); if(dm>0) c.push(`<span class="dchip">🕐 ผ่านไป ${dm} นาที</span>`);
+ const c=[], add=(t,g)=>c.push(`<span class="dchip ${g?"g":"b"}">${t}</span>`);
+ const dh=Math.round(cur.hp-p.hp); if(dh<0) add(`💔 บาดเจ็บ ${dh}`,0); else if(dh>0) add(`❤️ ดีขึ้น +${dh}`,1);
+ const ds=cur.st-p.st; if(ds<=-12) add("😮‍💨 เหนื่อยขึ้น",0); else if(ds>=12) add("⚡ หายเหนื่อย",1);
+ const da=cur.sa-p.sa; if(da<=-5) add("😰 ใจเสีย",0); else if(da>=5) add("🙂 ใจชื้นขึ้น",1);
+ const dm=Math.round(cur.money-p.money); if(dm) add(`💵 ${dm>0?"+":""}${dm} บาท`,dm>0);
+ if(VEHS[G.veh].fuel){ const df=cur.fuel-p.fuel; if(df>=10) add("⛽ ได้น้ำมัน",1); }
+ const da2=cur.am-p.am; if(da2) add(`🔫 กระสุน ${da2>0?"+":""}${da2}`,da2>0);
+ const dt=Math.round(cur.min-p.min); if(dt>0) c.push(`<span class="dchip">🕐 ผ่านไป ${dt} นาที</span>`);
  return c.length?`<div class="dchips">${c.join("")}</div>`:"";
 }
 function show(o){
@@ -1112,18 +1163,44 @@ function show(o){
  UI.choices=(o.choices||[]).filter(Boolean); UI.scene=o.k||"";
  const logs=o.log===false?"":G.log.slice(-(Math.min(G._newLog||0,5))||-0.5).map(l=>`<div class="log">${l}</div>`).join(""); G._newLog=0;
  app.innerHTML=hud()+`<div class="scr"><div id="tbar"></div><div class="panel ${o.flash?"flash shake":""}">
-  ${o.loc?`<div class="loc">${o.loc}</div>`:""}<div class="story">${tk(o.text||"")}</div>${o.narr?`<div class="narr">${tk(o.narr)}</div>`:""}${o.delta===false?"":deltaChips()}${logs?`<div style="margin-top:8px">${logs}</div>`:""}</div>
+  ${o.ic?`<div class="scene-ic">${o.ic}</div>`:""}${o.loc?`<div class="loc">${o.loc}</div>`:""}<div class="story">${tk(o.text||"")}</div>${o.narr?`<div class="narr">${tk(o.narr)}</div>`:""}${o.delta===false?"":deltaChips()}${logs?`<div style="margin-top:8px">${logs}</div>`:""}</div>
   ${o.html||""}<div class="choices" id="ch"></div></div>`;
- const C=$("#ch");
- UI.choices.forEach(c=>{ const b=document.createElement("button"); b.className="btn"+(c.primary?" primary":"")+(c.ghost?" ghost sm":""); if(c.dis)b.disabled=true;
-  b.innerHTML=tk(c.l)+(c.sub?`<div class="cost">${tk(c.sub)}</div>`:"")+(c.p!=null?pctSpan(c.p):""); b.onclick=()=>{clearTimer();c.go();}; C.appendChild(b); });
- if(o.timer&&!window.__BOT){ const bar=$("#tbar"); bar.innerHTML='<div class="timer-bar"><i></i></div>'; const t0=Date.now(); _tm=setInterval(()=>{ const p=1-(Date.now()-t0)/(o.timer*1000); const i=bar.querySelector("i"); if(i)i.style.width=Math.max(0,p*100)+"%"; if(p<=0){clearTimer();o.onTimeout();} },100); }
+ const C=$("#ch"); let sec=null, box=null, boxK=null;
+ UI.choices.forEach(c=>{
+  if(c.sec&&c.sec!==sec){ sec=c.sec; const h=document.createElement("div"); h.className="sec"; h.textContent=c.sec; C.appendChild(h); box=null; }
+  const kind=c.half?"grid2":c.mini?"rowx":null;
+  if(kind!==boxK||!kind){ box=null; boxK=kind; }
+  if(kind&&!box){ box=document.createElement("div"); box.className=kind; C.appendChild(box); }
+  const b=document.createElement("button"); b.className="btn"+(c.primary?" primary":"")+(c.ghost?" ghost sm":"")+(c.route?" route":""); if(c.dis)b.disabled=true;
+  b.innerHTML=(c.ic?`<span class="tic">${c.ic}</span>`:"")+tk(c.l)+(c.badge?`<em class="bdg">${c.badge}</em>`:"")+(c.sub?`<div class="cost">${tk(c.sub)}</div>`:"")+(c.p!=null&&!c.half&&!c.mini?pctSpan(c.p):"");
+  b.onclick=()=>{clearTimer();c.go();}; (box||C).appendChild(b); });
+ if(o.flash) buzz(o.flash===2?[60,40,140]:90);
+ if(o.timer&&!window.__BOT){ const bar=$("#tbar"); bar.innerHTML='<div class="timer-bar"><i></i></div><div class="small center" id="tsec"></div>'; const t0=Date.now(); let lastS=-1; _tm=setInterval(()=>{ const el=(Date.now()-t0)/1000, p=1-el/o.timer; const i=bar.querySelector("i"); if(i)i.style.width=Math.max(0,p*100)+"%"; const sl=Math.ceil(o.timer-el); if(sl!==lastS){ lastS=sl; const ts=$("#tsec"); if(ts) ts.textContent=`⏳ ตัดสินใจภายใน ${Math.max(0,sl)} วินาที`; if(sl<=5){ beep(62,.1,"sine",.12); buzz(30); } } if(p<=0){clearTimer();o.onTimeout();} },100); }
  updateScrim(); window.scrollTo(0,0);
 }
+function buzz(p){ if(window.__BOT||!SND.on) return; try{ navigator.vibrate&&navigator.vibrate(p); }catch(e){} }
+function notify(who,txt){ if(window.__BOT) return; const n=$("#notif"); if(!n) return; n.innerHTML=`<div class="nt">💬 ${who} • ตอนนี้</div><div class="nb">${txt}</div>`; n.classList.add("on"); buzz([40,60,40]);
+ clearTimeout(n._t); n._t=setTimeout(()=>n.classList.remove("on"),4500); n.onclick=()=>{ n.classList.remove("on"); if(G&&!G.over) renderChat(); }; }
 function toast(title,text,after){ show({loc:title,text,flash:false,k:"toast",choices:[{l:"▶ ต่อไป",primary:true,k:"cont",go:after||flow}]}); }
 function updateScrim(){ const s=$("#scrim"); if(!s||!G)return; const low=1-clamp(G.hp/G.hpMax,0,1); s.style.boxShadow=`inset 0 0 80px 20px rgba(255,0,20,${low*.6})`; app.classList.toggle("glitch",G.sanity<30&&!G.over); }
-let AC=null;
-function beep(f,d,type,vol){ if(window.__BOT)return; try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type=type||"sine";o.frequency.value=f;g.gain.value=vol||.05;o.connect(g);g.connect(AC.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.stop(AC.currentTime+d);return o;}catch(e){} }
+let AC=null; const SND={on:load("overtime.snd",true)}; let AMB=null;
+function beep(f,d,type,vol){ if(window.__BOT||!SND.on)return; try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type=type||"sine";o.frequency.value=f;g.gain.value=vol||.05;o.connect(g);g.connect(AC.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.stop(AC.currentTime+d);return o;}catch(e){} }
+
+function ambStart(){ if(window.__BOT||!SND.on||AMB) return; try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==="suspended")AC.resume();
+ const len=AC.sampleRate*3, b=AC.createBuffer(1,len,AC.sampleRate), d=b.getChannelData(0); for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+ const s=AC.createBufferSource(); s.buffer=b; s.loop=true; const f=AC.createBiquadFilter(); f.type="lowpass"; f.frequency.value=240; const g=AC.createGain(); g.gain.value=.03; s.connect(f); f.connect(g); g.connect(AC.destination); s.start();
+ AMB={s,t:null}; const tick=()=>{ if(!AMB) return; if(G&&!G.over&&G.min>=0){ const ph=phase().k, r=Math.random();
+   if(r<({early:.3,deep:.5,hell:.65,dawn:.25})[ph]) farShot(); else if(r<.72) farWail();
+   if(G.hp<G.hpMax*.35) heart(); }
+  AMB.t=setTimeout(tick,rnd(3500,9500)); }; AMB.t=setTimeout(tick,2500); }catch(e){} }
+function ambStop(){ if(!AMB) return; try{AMB.s.stop()}catch(e){} clearTimeout(AMB.t); AMB=null; }
+function farShot(){ try{ const c=AC, t=c.currentTime, k=chance(.4)?ri(2,5):1, vol=rnd(.04,.14);
+ for(let i=0;i<k;i++){ const b=c.createBuffer(1,c.sampleRate*.3,c.sampleRate), d=b.getChannelData(0); for(let j=0;j<d.length;j++) d[j]=(Math.random()*2-1)*Math.pow(1-j/d.length,5);
+  const s=c.createBufferSource(); s.buffer=b; const f=c.createBiquadFilter(); f.type="lowpass"; f.frequency.value=rnd(400,1100); const g=c.createGain(); g.gain.value=vol; s.connect(f); f.connect(g); g.connect(c.destination); s.start(t+i*rnd(.1,.35)); } }catch(e){} }
+function farWail(){ try{ const c=AC, t=c.currentTime, o=c.createOscillator(), g=c.createGain(), f=c.createBiquadFilter(); f.type="lowpass"; f.frequency.value=900;
+ o.type=chance(.5)?"sawtooth":"triangle"; const base=rnd(280,520); o.frequency.setValueAtTime(base,t); o.frequency.linearRampToValueAtTime(base*rnd(1.2,1.6),t+.5); o.frequency.linearRampToValueAtTime(base*.8,t+1.4);
+ g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(rnd(.006,.016),t+.3); g.gain.exponentialRampToValueAtTime(.0001,t+1.6); o.connect(f); f.connect(g); g.connect(c.destination); o.start(t); o.stop(t+1.7); }catch(e){} }
+function toggleSnd(){ SND.on=!SND.on; save("overtime.snd",SND.on); if(!SND.on) ambStop(); renderTitle(); }
 function siren(){ try{const o=beep(400,3.2,"sawtooth",.04);if(o){const t=AC.currentTime;for(let i=0;i<4;i++){o.frequency.linearRampToValueAtTime(760,t+i*.8+.4);o.frequency.linearRampToValueAtTime(400,t+i*.8+.8);}}}catch(e){} }
 function heart(){ if(G.hp<G.hpMax*.35){ beep(60,.12,"sine",.14); setTimeout(()=>beep(52,.14,"sine",.1),180); } }
 
@@ -1155,52 +1232,65 @@ function ambience(){
  const H=G.hunter; if(!H.dead&&H.at!=null){ const p=bfs(H.at,G.at); const d=p?p.length-1:9; if(d<=1) t+="\n\nขนที่ต้นคอลุก มีคนมองอยู่ ใกล้มาก"; else if(d===2&&(H.known||sk("read")>=1)) t+="\n\nมีใครบางคนตามรอยมา ยังไม่ถึง แต่ไม่ไกล"; }
  return t;
 }
-function dangerWord(o){
- if(G.phoneBat<=0&&!G.seen[o.to]) return "ไม่รู้ว่ามีอะไร";
- if(G.hunter.known&&!G.hunter.dead&&G.hunter.at===o.to) return "🎯 นักล่ารออยู่";
- if(o.fire) return "🔥 ไฟไหม้ (เจ็บตัวแน่)";
- if(o.gang) return "💀 มีแก๊ง (อันตราย)";
- if(o.e.blocked>0) return "🚧 มีด่านขวาง";
- if(!G.vis[o.to]) return "❓ ไม่มีข้อมูล";
- const d=place(o.n).d+(phase().k==="hell"?1:0); return d<=0?"🟢 น่าจะเงียบ":d<=1?"🟡 เสี่ยงนิดหน่อย":d===2?"🟠 เสี่ยง":"🔴 อันตราย";
+function dangerLv(o){
+ if(G.hunter.known&&!G.hunter.dead&&G.hunter.at===o.to) return 4;
+ if(o.fire||o.gang) return 4; if(o.e.blocked>0) return 3; if(!G.vis[o.to]) return 2;
+ const d=place(o.n).d+(phase().k==="hell"?1:0); return d<=0?0:d<=1?1:d===2?2:3;
 }
-function routeChoice(o,i){
- const pl=place(o.n), T=ETYPES[o.e.t], dark=G.phoneBat<=0;
- const way={road:"",soi:" • ซอยเล็ก เงียบ",hwy:" • ทางหลวง เร็วแต่เสียงดัง",canal:" • นั่งเรือ",rail:" • เดินตามรางรถไฟ เงียบ",sewer:" • มุดท่อ เงียบมากแต่หลอน"}[o.e.t];
- let sub=(dark?"":`ใช้ ${o.min} นาที • `)+dangerWord(o)+way;
- if(o.note) sub+=` • ⚠️ ${o.note}`; if(o.runOut) sub+=" • ⚠️ น้ำมันไม่พอ ต้องทิ้งรถกลางทาง";
- const dir=o.fwd>0?"➡️ ไป":o.fwd<0?"↩︎ ถอยกลับไป":"↔︎ อ้อมไป";
- return {l:`${dir}${pl.n} ${pl.ic}`,sub,dis:!o.ok,primary:o.fwd>0&&i===0,k:"travel",meta:o,go:()=>travel(o)};
+function dangerWord(o){
+ if(G.phoneBat<=0&&!G.seen[o.to]) return "❓ มองไม่เห็นว่ามีอะไร";
+ if(G.hunter.known&&!G.hunter.dead&&G.hunter.at===o.to) return "🎯 คนที่ตามล่าเรารออยู่";
+ if(o.fire) return "🔥 ไฟไหม้อยู่ เจ็บตัวแน่";
+ if(o.gang) return "💀 มีแก๊งยึดอยู่";
+ if(o.e.blocked>0) return "🚧 มีด่านขวางทาง";
+ if(!G.vis[o.to]) return "❓ ไม่รู้ว่ามีอะไรรอ";
+ const d=dangerLv(o); return d<=0?"🟢 น่าจะเงียบ":d<=1?"🟡 เสี่ยงนิดหน่อย":d===2?"🟠 อันตราย":"🔴 อันตรายมาก";
+}
+function routeChoice(o,i,rec){
+ const pl=place(o.n), dark=G.phoneBat<=0;
+ const way={road:"ถนน",soi:"ซอยเล็ก เงียบกว่า",hwy:"ทางหลวง เร็วแต่โล่ง",canal:"นั่งเรือไปตามคลอง",rail:"เดินตามรางรถไฟ เงียบ",sewer:"มุดท่อ เงียบมากแต่หลอน"}[o.e.t];
+ let sub=(dark?"":`⏱ ${o.min} นาที • `)+way+"\n"+dangerWord(o);
+ if(o.note) sub+=` • ⚠️ ${o.note}`; if(o.runOut) sub+=" • ⚠️ น้ำมันไม่พอ ต้องเดินต่อ";
+ const back=o.fwd<0, side=o.fwd===0;
+ return {l:`${back?"↩︎ ถอยกลับไป ":side?"↔︎ อ้อมไป ":""}${pl.n}${o.n.p==="home"?" (บ้าน!)":""}`,ic:pl.ic,sub,dis:!o.ok,route:true,primary:!!rec,badge:rec?"👍 น่าไปสุด":"",k:"travel",meta:o,go:()=>travel(o)};
 }
 function allRoutes(){ return adj(G.at).map(travelInfo).sort((a,b)=>b.fwd-a.fwd||a.min-b.min); }
+function tripStrip(){
+ const L=G.map.L, cl=node().l; let h=`<div class="panel" style="padding:10px 14px"><div class="trip">`;
+ for(let l=0;l<=L;l++){ if(l>0) h+=`<i class="${l<=cl?"d":""}"></i>`; h+=l===cl?"<b>📍</b>":l===L?"<b>🏠</b>":l<cl?"<span style='color:var(--red)'>●</span>":"<span style='color:#5a4a4d'>○</span>"; }
+ return h+`</div><div class="trip-cap"><span>ผ่านมา ${G.map.km-kmLeft()} กม.</span><span>เหลือ ${kmLeft()} กม. • ต้องถึงก่อน 07:00</span></div></div>`;
+}
 function nodeMenu(){
  lookAround(); saveRun();
- const n=node(), pl=place(n), kit=G.inv.includes("ชุดปฐมพยาบาล");
- const all=allRoutes(); let main=all.filter(o=>o.fwd>0&&o.ok); if(!main.length) main=all.filter(o=>o.ok);
- const ch=main.map(routeChoice);
+ const n=node(), pl=place(n), kit=G.inv.includes("ชุดปฐมพยาบาล"), hurt=G.bleed>0||G.hp<G.hpMax;
+ const all=allRoutes(); let main=all.filter(o=>o.fwd>0); if(!main.some(o=>o.ok)) main=all.filter(o=>o.ok);
+ main=main.sort((a,b)=>(b.ok-a.ok)).slice(0,3);
+ const okm=main.filter(o=>o.ok), best=okm.slice().sort((a,b)=>dangerLv(a)*35+a.min-(dangerLv(b)*35+b.min))[0];
+ const SEC="🧭 ไปต่อทางไหน";
+ const ch=main.map((o,i)=>({...routeChoice(o,i,o===best),sec:SEC}));
  if(!n.fire){
-  if(G.bleed>0||G.hp<G.hpMax*.6) ch.push({l:"🩹 ทำแผลก่อน",sub:`ใช้ 15 นาที • ${kit?"มีชุดปฐมพยาบาล ได้เลือดคืนเยอะ":"ไม่มีชุดปฐมพยาบาล ได้แค่ห้ามเลือด"}`,k:"heal",go:aHeal});
-  if(n.loot>0) ch.push({l:"🔍 ค้นหาของที่นี่",sub:`ใช้ 20 นาที • ${n.loot>=67?"ของน่าจะเยอะ":n.loot>=34?"เหลือของบ้าง":"แทบไม่เหลือแล้ว"} • อาจเจอคน`,k:"search",go:aSearch});
-  ch.push({l:"⋯ ทำอย่างอื่น",sub:"ซ่อนพัก ฟังข่าว หาคน ดูแผนที่ ทางอื่น",ghost:true,k:"more",go:moreMenu});
+  const A="📍 หรือทำอะไรที่นี่ก่อน (ทุกอย่างกินเวลา)";
+  ch.push({l:"ค้นของ",ic:"🔍",half:true,sec:A,sub:`20 นาที • ${n.loot>=67?"ของน่าจะเยอะ":n.loot>=34?"เหลือบ้าง":n.loot>0?"แทบไม่เหลือ":"ค้นหมดแล้ว"}`,dis:n.loot<=0,k:"search",go:aSearch});
+  ch.push({l:"ทำแผล",ic:"🩹",half:true,sec:A,sub:hurt?`15 นาที • ${kit?"มีชุดปฐมพยาบาล":"ไม่มีชุดปฐมพยาบาล"}`:"ยังไม่เจ็บ",dis:!hurt,k:"heal",go:aHeal});
+  ch.push({l:"ซ่อนพัก",ic:"🫥",half:true,sec:A,sub:"30 นาที • หายเหนื่อย",k:"hide",go:aHide});
+  ch.push({l:"หาคน",ic:"🧍",half:true,sec:A,sub:"20 นาที • อาจได้เพื่อนหรือของ",k:"seek",go:aSeek});
+  if(G.phoneBat>3) ch.push({l:"📻 ฟังข่าว",mini:true,sec:A,k:"radio",go:aRadio});
+  if(G.phoneBat>0) ch.push({l:"🗺️ แผนที่",mini:true,sec:A,k:"mapview",go:mapScreen});
+  if(all.length>main.length) ch.push({l:"↔︎ ทางอื่น",mini:true,sec:A,k:"more",go:moreMenu});
+  ch.push({l:"❓ วิธีเล่น",mini:true,sec:A,k:"helpview",go:helpScreen});
  }
- const help=META.runs<=2&&G.moves<2?"\n\n👉 เลือกทางไปต่อ (ปุ่มสีแดงคือทางแนะนำ) หรือค้นของที่นี่ก่อน ทุกอย่างใช้เวลา ต้องถึง 🏠 ก่อน 07:00":"";
- show({loc:`📍 ${pl.ic} ${pl.n}${n.fire?" • 🔥 กำลังไหม้":""}`,text:ambience()+help,k:"menu",choices:ch});
+ const help=META.runs<=2&&G.moves<2?"\n\n👇 เลือกทางไปต่อด้านล่าง ปุ่มแดงคือทางที่ดูดีที่สุดตอนนี้ ไปถึง 🏠 ให้ได้ก่อน 07:00":"";
+ show({ic:pl.ic,loc:`📍 ${pl.n}${n.fire?" • 🔥 กำลังไหม้":""}`,text:ambience()+help,html:tripStrip(),k:"menu",choices:ch});
 }
 function moreMenu(){
- const n=node(), all=allRoutes(), main=all.filter(o=>o.fwd>0&&o.ok), rest=all.filter(o=>!main.includes(o)||!main.length&&false).filter(o=>main.length?true:!o.ok);
- const kit=G.inv.includes("ชุดปฐมพยาบาล");
- const ch=[{l:"🫥 ซ่อนตัวพัก",sub:"ใช้ 30 นาที • ได้แรงคืน คนตามรอยยากขึ้น",k:"hide",go:aHide}];
- if(G.phoneBat>3) ch.push({l:"📻 ฟังข่าวในมือถือ",sub:"ใช้ 10 นาที • รู้ว่าทางข้างหน้ามีอะไร (กินแบต)",k:"radio",go:aRadio});
- ch.push({l:"🧍 มองหาคนแถวนี้",sub:"ใช้ 20 นาที • อาจได้เพื่อนร่วมทาง พ่อค้า หรือเจอเรื่อง",k:"seek",go:aSeek});
- if(!(G.bleed>0||G.hp<G.hpMax*.6)&&G.hp<G.hpMax) ch.push({l:"🩹 ทำแผล",sub:"ใช้ 15 นาที"+(kit?"":" • ไม่มีชุดปฐมพยาบาล"),k:"heal",go:aHeal});
- rest.forEach((o,i)=>ch.push(routeChoice(o,9)));
- if(G.phoneBat>0) ch.push({l:"🗺️ ดูแผนที่",ghost:true,k:"mapview",go:mapScreen});
- ch.push({l:"❓ วิธีเล่น",ghost:true,k:"helpview",go:helpScreen});
+ const all=allRoutes(), main=all.filter(o=>o.fwd>0).slice(0,3), rest=all.filter(o=>!main.includes(o));
+ const ch=rest.map((o,i)=>routeChoice(o,9,false));
+ if(!ch.length) ch.push({l:"ไม่มีทางอื่นจากตรงนี้",dis:true,k:"x",go:()=>{}});
  ch.push({l:"← กลับ",ghost:true,k:"back",go:nodeMenu});
- show({loc:"⋯ ทำอย่างอื่น",text:"ทุกอย่างใช้เวลา และยิ่งอยู่นาน คนที่ตามรอยมาก็ยิ่งใกล้",k:"more",log:false,delta:false,choices:ch});
+ show({loc:"↔︎ ทางอื่น",text:"ทางพวกนี้ไม่ได้พาเข้าใกล้บ้าน แต่บางทีการอ้อมก็ดีกว่าการตาย",k:"more",log:false,delta:false,choices:ch});
 }
 function helpScreen(){
- show({loc:"❓ วิธีเล่น",log:false,delta:false,k:"help",text:"เป้าหมาย: ไปให้ถึง 🏠 ก่อน 07:00 โดยไม่ตาย\n\n• แต่ละจุด เลือก “➡️ ไป...” เพื่อเดินทางต่อ หรือทำอย่างอื่นที่นั่นก่อน\n• ทุกการกระทำใช้เวลา ดูนาฬิกามุมซ้ายบน\n• ❤️ เลือดหมด = ตาย • ⚡ แรงน้อย = หนีไม่พ้น ตีไม่โดน • 🧠 สติน้อย = ตัวเลขโอกาสเริ่มเชื่อไม่ได้\n• 🩸 เลือดไหลจะเสียเลือดไปเรื่อยๆ จนกว่าจะทำแผล\n• เดินเท้าไปไม่ถึงแน่ถ้าไกลเกิน 50 กม. ต้องหารถ (ค้นของตามลานจอดรถ ปั๊ม สุสานรถ)\n• รถใช้น้ำมัน ⛽ หมดกลางทางต้องเดิน\n• ตัวเลข % คือโอกาสสำเร็จของตัวเลือกนั้น\n• ปุ่ม 💬 ด้านล่างคือแชตกับคนที่รอ ยิ่งไปถึงช้า ที่นั่นยิ่งอันตราย\n• มีนักล่าหนึ่งคนตามรอยเราทั้งคืน อยู่ที่เดิมนานๆ มันจะตามทัน",choices:[{l:"← กลับ",primary:true,k:"back",go:nodeMenu}]});
+ show({loc:"❓ วิธีเล่น",log:false,delta:false,k:"help",text:"🎯 เป้าหมายเดียว: ไปให้ถึง 🏠 ก่อน 07:00 แบบยังมีชีวิต\n\n1️⃣ ทุกจุด เลือกว่าจะ “ไปต่อทางไหน” ทางที่เป็นปุ่มแดงคือทางที่ดูดีที่สุด\n2️⃣ ระหว่างทางจะเจอเหตุการณ์ อ่านแล้วเลือกว่าจะทำอะไร ป้ายขวามือบอกว่า “น่าจะได้ / ลุ้น / เสี่ยงมาก”\n3️⃣ ถ้ามีแถบเวลาวิ่ง ต้องรีบเลือก ไม่งั้นตัวจะแข็งเอง\n\n❤️ หัวใจหมด = ตาย • ถ้าเจ็บให้กด 🩹 ทำแผล\n😮‍💨 เหนื่อยมาก = หนีไม่พ้น • กด 🫥 ซ่อนพัก\n🚶 เดินเท้าไปไม่ทันแน่ ต้อง 🔍 ค้นหารถ (ลานจอดรถ ปั๊ม สุสานรถ)\n💬 ปุ่มแชตด้านล่าง คือคนที่รอเราอยู่ ยิ่งไปช้า ที่บ้านยิ่งอันตราย\n🎯 มีคนหนึ่งตามล่าเราทั้งคืน อยู่ที่เดิมนานๆ มันจะตามทัน",choices:[{l:"← กลับ",primary:true,k:"back",go:nodeMenu}]});
 }
 function aSearch(){
  const n=node(), pl=place(n); passTime(20); G.noise=clamp(G.noise+1,0,10);
@@ -1307,10 +1397,12 @@ function playCard(card){
  G.used[card.id]=1; if(card.fl) G.flags[card.fl]=true;
  if(card.script) return window[card.script]();
  const pl=place(node());
- const ch=card.c.filter(c=>!c[5]||!c[5].req||c[5].req(G)).map(c=>({l:c[0],p:c[2]!=null?pOf(c[2],c[1]):null,k:"card",sub:c[1]&&sk(c[1])>0?"👍 อาชีพคุณถนัดเรื่องนี้":"",go:()=>resolveChoice(card,c)}));
+ const ch=card.c.filter(c=>!c[5]||!c[5].req||c[5].req(G)).map(c=>({l:c[0],p:c[2]!=null?pOf(c[2],c[1]):null,k:"card",sub:c[1]&&sk(c[1])>0?"👍 อาชีพคุณถนัดเรื่องนี้":c[1]?SKW[c[1]]||"":"",go:()=>resolveChoice(card,c)}));
  if(!ch.length) return flow();
- show({loc:`${pl.ic} ${pl.n}`,text:card.t,k:"card",choices:ch,flash:!!card.timer,timer:card.timer,onTimeout:()=>{ const c=card.c[card.c.length-1]; const res=c[4]||c[3]; G.sanity-=5; runRes("ตัวแข็ง คิดไม่ทัน\n\n"+res[0],res[1]); }});
+ const ph=phase().k, autoT=!card.timer&&(ph==="hell"||(ph==="deep"&&chance(.35)))&&card.c.length>1&&!G.noMercy?Math.round(clamp(card.t.length/9+10,14,26)):0, T=card.timer||autoT;
+ show({ic:pl.ic,loc:`${pl.ic} ${pl.n}${T?" • ⚠️ ต้องรีบตัดสินใจ":""}`,text:card.t,k:"card",choices:ch,flash:!!T,timer:T,onTimeout:()=>{ const c=card.c[card.c.length-1]; const res=c[4]||c[3]; G.sanity-=5; runRes("ตัวแข็ง คิดไม่ทัน\n\n"+res[0],res[1]); }});
 }
+const SKW={sneak:"🤫 ใช้ความเงียบ",talk:"🗣️ ใช้คำพูด",force:"💪 ใช้แรง",run:"🏃 ใช้ความไว",read:"👀 ใช้การสังเกต",tech:"🔧 ใช้ความรู้ช่าง",med:"🩺 ใช้ความรู้พยาบาล",drive:"🚗 ใช้ฝีมือขับ",gun:"🔫 ใช้ปืน",scav:"🔍 ใช้การหาของ",blade:"🔪 ใช้มีด"};
 function resolveChoice(card,c){
  const ok=c[2]==null||chance(pOf(c[2],c[1])); const res=ok?c[3]:(c[4]||c[3]);
  runRes(res[0],res[1]);
@@ -1405,7 +1497,9 @@ function combatScreen(text,flash,more){
  const mainK=["attack","close","defend","flee"]; let list;
  if(more){ list=ch.filter(c=>!mainK.includes(c.k)||c!==ch.find(x=>x.k===c.k)); list.push({l:"← กลับ",ghost:true,k:"back",go:()=>combatScreen(text)}); }
  else { list=mainK.map(k=>ch.find(c=>c.k===k)).filter(Boolean); const others=ch.filter(c=>!list.includes(c)); if(others.length) list.push({l:"⋯ ท่าอื่น",sub:others.slice(0,3).map(c=>c.l.replace(/\(.*\)/,"").trim()).join(" / "),ghost:true,k:"cmore",go:()=>combatScreen(text,false,true)}); }
- show({loc:`⚔️ สู้กับ ${e.name}`,text,narr:`ศัตรู: ${hpWord()}\n${tele}${r>0?" • อยู่ห่างกัน":" • ประชิดตัว"}`,k:more?"cmore":"combat",flash,delta:!more,choices:list});
+ const FIC={worker:"😡",punk:"🏍️",mask:"👹",cult:"🕯️",hunter:"🎯",robber:"🦹",tourist:"🔫",state:"🪖",dogs:"🐕"};
+ const foe=`<div class="panel" style="padding:10px 14px"><div class="foe"><div class="fic">${FIC[e.key]||"😡"}</div><div class="fb"><b>${e.name}${e.count>1?` (${alive()}/${e.count})`:""}</b><div class="small">${hpWord()}</div><div class="fbar"><i style="width:${clamp(e.hp/e.hp0*100,3,100)}%"></i></div></div></div><div class="small" style="margin-top:6px">${tele}${r>0?" • ยังอยู่ห่างกัน":" • ประชิดตัว!"}</div></div>`;
+ show({loc:`⚔️ สู้กับ ${e.name}`,text,html:foe,k:more?"cmore":"combat",flash:flash?2:false,delta:!more,choices:list});
 }
 function cSwap(){ const sw=G.inv.filter(x=>WEAPONS[x]&&x!==G.weapon&&(!WEAPONS[x].gun||G.ammo>0));
  show({loc:"🔄 เปลี่ยนอาวุธ",text:"มือควานในกระเป๋า ตายังไม่ละจากมัน",k:"swap",log:false,choices:sw.map(x=>({l:x,sub:`แรง ${WEAPONS[x].dmg}`,k:"pick",go:()=>{G.weapon=x;enemyTurn(.8,"คว้า"+x+"ขึ้นมา ")}})).concat([{l:"← ไม่เปลี่ยน",ghost:true,k:"back",go:()=>combatScreen("ยังเผชิญหน้ากันอยู่")}])}); }
@@ -1658,7 +1752,7 @@ function waiterTick(){
  const tl=CHAT[G.w.arch].tl;
  while(G.tlIdx<tl.length&&tl[G.tlIdx][0]<=G.min){ const ev=tl[G.tlIdx++]; if(G.phoneBat<=0||G.homeBetray&&G.betrayType==="impostor"&&ev[2]) continue; pushChat("them",ev[1],true); if(ev[2]==="uncle") G.flags.pendingUncle=true; }
 }
-function pushChat(side,txt,unread){ G.chatlog.push({side,txt:tk(txt),t:hhmm(Math.max(0,G.min))}); if(side==="them"&&unread){G.unread=(G.unread||0)+1; beep(880,.08,"sine",.03);} if(tab==="chat")renderChat(); else updateChatBadge(); }
+function pushChat(side,txt,unread){ G.chatlog.push({side,txt:tk(txt),t:hhmm(Math.max(0,G.min))}); if(side==="them"&&unread){G.unread=(G.unread||0)+1; beep(880,.08,"sine",.03); if(tab!=="chat"&&G.min>=0) notify(G.w.rel+(G.w.name?" "+G.w.name:""),tk(txt));} if(tab==="chat")renderChat(); else updateChatBadge(); }
 function updateChatBadge(){ const b=$("#chatBadge"); if(!b||!G)return; b.style.display=G.unread>0?"inline-block":"none"; b.textContent=G.unread; }
 function later(fn){ const rid=G.rid; if(window.__BOT) return fn(); setTimeout(()=>{ if(G&&G.rid===rid&&!G.over) fn(); },900+Math.random()*900); }
 function chatSend(kind){
@@ -1741,7 +1835,7 @@ function finishEnding(pair){
  renderEnding();
 }
 function renderEnding(){
- setNav(false); setTabUI("game"); app.classList.remove("glitch"); const e=G.ending, n=Object.keys(META.endings).length; UI.choices=[]; UI.scene="end";
+ ambStop(); buzz([200,100,400]); setNav(false); setTabUI("game"); app.classList.remove("glitch"); const e=G.ending, n=Object.keys(META.endings).length; UI.choices=[]; UI.scene="end";
  app.innerHTML=`<div class="scr dead"><div class="big-end"><div class="ecat">${ENDINGS[e.cat].cat}${e.isNew?" • ใหม่":""}</div><div class="et">${e.title}</div></div>
  <div class="panel"><div class="story">${e.text}</div></div>
  <div class="panel"><div class="kv"><span>ตัวตน</span><b>${G.gender==="m"?"ชาย":"หญิง"} ${G.age} ปี • ${G.job.name}</b></div><div class="kv"><span>ปลายทาง</span><b>${G.dest}</b></div><div class="kv"><span>คนที่รอ</span><b>${G.w.rel}</b></div>
@@ -1784,15 +1878,18 @@ function setTabUI(t){ tab=t; app.style.display=t==="game"?"":"none"; side.style.
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ if(!G||G.over)return; const t=b.dataset.tab; t==="game"?setTabUI("game"):t==="chat"?renderChat():t==="inv"?renderInv():renderBook(); });
 //========================= TITLE / PREP =========================
 function renderTitle(){
- setNav(false); setTabUI("game"); clearTimer(); app.classList.remove("glitch"); const s=$("#scrim"); if(s)s.style.boxShadow="none"; UI.choices=[];
+ setNav(false); setTabUI("game"); clearTimer(); ambStop(); app.classList.remove("glitch"); const s=$("#scrim"); if(s)s.style.boxShadow="none"; UI.choices=[];
  const n=Object.keys(META.endings).length, sv=load(SKEY,null), can=sv&&sv.v===VER&&!sv.over;
  app.innerHTML=`<div class="scr title-wrap"><div class="logo">OVERTIME<small>คืนไร้กฎ</small></div>
- <div class="tag">ปีละหนึ่งคืน สิบสองชั่วโมง ไม่มีกฎหมาย<br>คืนนี้คุณกลับไม่ทันไซเรน และมีคนรออยู่ที่ปลายทาง<br><b style="color:var(--red)">ไปให้ถึงก่อน 07:00</b></div>
+ <div class="tag">ปีละหนึ่งคืน สิบสองชั่วโมง ไม่มีกฎหมาย<br>คืนนี้คุณเลิกงานไม่ทันไซเรน และมีคนรออยู่ที่บ้าน<br><b style="color:var(--red)">กลับไปให้ถึงก่อน 07:00</b></div>
  ${META.runs?`<div class="small">ปีที่ ${META.year} • ตอนจบ ${n}/100 • ผ่านมา ${META.runs} คืน</div>`:""}${META.scars.length?`<div class="small" style="color:var(--amber)">สิ่งที่ติดตัวมาจากปีก่อน: ${META.scars.join(", ")}</div>`:""}
  ${can?`<button class="btn primary" onclick="resumeRun()">⏯️ เล่นต่อ</button>`:""}<button class="btn ${can?"":"primary"}" onclick="renderCreate()">🩸 เริ่มคืนใหม่</button>
- ${n?`<button class="btn ghost" onclick="renderBook()">📖 สมุดสะสมตอนจบ (${n}/100)</button>`:""}<div class="small" style="margin-top:20px;color:#5a4a4d">เรื่องแต่งทั้งหมด • มีความรุนแรง • เซฟอัตโนมัติในเครื่องนี้</div></div>`;
+ ${n?`<button class="btn ghost" onclick="renderBook()">📖 สมุดสะสมตอนจบ (${n}/100)</button>`:""}
+ <div class="howto"><b>เล่นยังไง</b><br>1. เลือกทางกลับบ้านทีละจุด 🧭<br>2. เจอเหตุการณ์ระหว่างทาง ตัดสินใจว่าจะทำอะไร<br>3. ไปถึง 🏠 ก่อนฟ้าสาง โดยหัวใจ ❤️ ไม่หมด</div>
+ <button class="btn ghost sm" onclick="toggleSnd()">${SND.on?"🔊 เสียงและการสั่น: เปิด (ใส่หูฟังจะหลอนกว่า)":"🔇 เสียงและการสั่น: ปิด"}</button>
+ <div class="small" style="margin-top:20px;color:#5a4a4d">เรื่องแต่งทั้งหมด • มีความรุนแรง • เซฟอัตโนมัติในเครื่องนี้</div></div>`;
 }
-function resumeRun(){ const s=load(SKEY,null); if(!s||s.v!==VER)return renderTitle(); G=s; G.job=JOBS.find(j=>j.id===G.job.id)||G.job; G._c=null; G.flags=G.flags||{}; flow(); }
+function resumeRun(){ const s=load(SKEY,null); if(!s||s.v!==VER)return renderTitle(); G=s; ambStart(); G.job=JOBS.find(j=>j.id===G.job.id)||G.job; G._c=null; G.flags=G.flags||{}; flow(); }
 function renderCreate(){
  setNav(false); setTabUI("game"); G=null;
  app.innerHTML=`<div class="scr"><h2>คืนนี้คุณเป็นใคร</h2><div class="tag">เลือกได้แค่เพศ ที่เหลือโชคชะตาเลือกให้: อายุ อาชีพ นิสัย จุดที่ติดอยู่ ปลายทาง และคนที่รอ</div>
@@ -1803,19 +1900,23 @@ function renderPrep(){
  setNav(false); const n=node(), pl=place(n), own=G.job.home.includes(n.p);
  const pool=[...new Set(pl.loot.filter(x=>x!=="-"))].concat(["ขวดน้ำ","$s","ไฟฉาย","ชุดปฐมพยาบาล","พาวเวอร์แบงก์"]); const picks=[...new Set(pool)].slice(0,6); let chosen=[];
  const lbl=t=>t==="$s"||t==="$m"||t==="$l"?"เงินสดที่วางอยู่":t==="fuel"?"แกลลอนน้ำมัน":t==="ammo"?"กล่องกระสุน":t.startsWith("veh:")?"กุญแจ"+t.slice(4):t;
+ const ic=t=>t==="$s"||t==="$m"||t==="$l"?"💵":t==="fuel"?"⛽":t==="ammo"?"📦":t.startsWith("veh:")?"🔑":itemIc(t);
+ const hint=t=>t.startsWith("veh:")?"ได้รถ ไปเร็วขึ้นมาก":t==="ชุดปฐมพยาบาล"?"รักษาแผลได้เยอะ":t==="ขวดน้ำ"||t==="อาหารกระป๋อง"?"กินแล้วหายเหนื่อย":t==="ไฟฉาย"?"ค้นของเจอง่ายขึ้น":t==="พาวเวอร์แบงก์"?"ชาร์จมือถือ":t==="fuel"?"เติมรถ":t==="ammo"?"กระสุนปืน":t[0]==="$"?"ใช้จ่ายหรือติดสินบน":WEAPONS[t]?"อาวุธ":"";
  const why=own?G.job.why:pick(["รถเที่ยวสุดท้ายไม่มา","โดนปล้นกลางทางจนไม่เหลืออะไร","รถเสียกลางทาง","ไปธุระแล้วกลับไม่ทัน","หลงทางตอนหาทางลัดกลับ"])+" เลยมาติดอยู่แถว"+pl.n;
- const draw=()=>{ app.innerHTML=`<div class="scr"><div class="loc">18:52 • ${pl.ic} ${pl.n} ${G.routeFrom}</div><h2>คืนนี้คุณคือ</h2>
-  <div class="panel"><div class="kv"><span>ตัวตน</span><b>${G.gender==="m"?"ชาย":"หญิง"} ${G.age} ปี • ${G.job.name}</b></div><div class="kv"><span>นิสัย</span><b>${G.trait.name}</b></div><div class="kv"><span>ปลายทาง</span><b>${G.dest}</b></div><div class="kv"><span>ระยะทาง</span><b>${G.map.km} กม.</b></div><div class="kv"><span>คนที่รอ</span><b>${G.w.rel}${G.w.name?" “"+G.w.name+"”":""}</b></div><div class="kv"><span>พาหนะ</span><b>${G.veh}</b></div>
-  <div class="small" style="margin-top:8px;color:var(--amber)">${G.job.perk}</div><div class="small" style="margin-top:4px">${ageNote()} • ${G.trait.desc}</div></div>
-  <div class="narr">${why} เหลืออีกแปดนาทีก่อนไซเรน คว้าของได้ 3 อย่าง</div>
-  <div class="panel"><div class="small">กฎปีนี้: <b style="color:var(--amber)">${G.ruleText}</b></div><div class="small" style="margin-top:6px">🔐 รหัสลับที่นัดกับ${G.w.n}: <b style="color:var(--green)">${G.secretCode}</b> ถ้าสงสัยว่าคนที่ตอบแชตไม่ใช่${G.w.n} ให้ถาม</div></div>
-  <div id="ll"></div><button class="btn primary" id="goBtn">🚨 ไซเรนดัง</button></div>`;
-  picks.forEach((t,i)=>{ const b=document.createElement("button"); b.className="btn sm"+(chosen.includes(i)?" primary":""); b.textContent=(chosen.includes(i)?"✅ ":"")+lbl(t); b.onclick=()=>{ chosen.includes(i)?chosen=chosen.filter(x=>x!==i):chosen.length<3&&chosen.push(i); draw(); }; $("#ll").appendChild(b); });
+ const wn=G.w.rel+(G.w.name?" “"+G.w.name+"”":"");
+ const draw=()=>{ app.innerHTML=`<div class="scr"><div class="panel flash"><div class="scene-ic">${pl.ic}</div><div class="loc">18:52 • ${pl.n} ย่าน${G.routeFrom}</div>
+  <div class="who">คุณคือ${G.gender==="m"?"ผู้ชาย":"ผู้หญิง"} ${G.age} ปี อาชีพ${G.job.name}</div>
+  <div class="story">${why}\n\nอีก 8 นาทีไซเรนจะดัง แล้วกฎหมายทุกข้อจะหายไป 12 ชั่วโมง\n<b>${wn}</b> รออยู่คนเดียวที่${G.dest} ห่างออกไป <b>${G.map.km} กม.</b>\nตอนนี้คุณ${G.veh==="เดินเท้า"?"ไม่มีรถ ต้องเดิน":"มี"+G.veh}</div>
+  <div class="small" style="color:var(--amber)">⭐ ${G.job.perk}</div><div class="small">🙂 นิสัย${G.trait.name}: ${G.trait.desc} • ${ageNote()}</div></div>
+  <div class="howto"><b>🎯 คืนนี้ต้องทำ</b><br>🏠 ไปให้ถึงบ้านก่อน 07:00<br>❤️ หัวใจหมด = ตาย เจ็บเมื่อไหร่ให้ทำแผล<br>🚗 ไกลขนาดนี้เดินไม่ทัน ระหว่างทางต้องหารถ<br>💬 คอยตอบแชต${G.w.n} ที่บ้านก็ไม่ปลอดภัย</div>
+  <div class="panel"><div class="small">📢 กฎปีนี้: <b style="color:var(--amber)">${G.ruleText}</b></div><div class="small" style="margin-top:6px">🔐 รหัสลับที่นัดกับ${G.w.n}ไว้: <b style="color:var(--green);font-size:16px">${G.secretCode}</b><br>ถ้าคนที่ตอบแชตดูแปลกๆ ให้ถามรหัสนี้</div></div>
+  <div class="sec">🎒 รีบคว้าของติดตัว ได้ 3 อย่าง (${chosen.length}/3)</div><div class="pick-grid" id="ll"></div><button class="btn primary" id="goBtn" style="margin-top:14px">${chosen.length<3?"🚨 ไซเรนดังแล้ว! ออกไปเลย":"🚨 ไซเรนดัง ออกเดินทาง"}</button></div>`;
+  picks.forEach((t,i)=>{ const b=document.createElement("button"); b.className="btn"+(chosen.includes(i)?" primary":""); b.innerHTML=`<span class="tic">${chosen.includes(i)?"✅":ic(t)}</span>${lbl(t)}<div class="cost">${hint(t)}</div>`; b.onclick=()=>{ chosen.includes(i)?chosen=chosen.filter(x=>x!==i):chosen.length<3&&chosen.push(i); draw(); }; $("#ll").appendChild(b); });
   $("#goBtn").onclick=()=>startNight(chosen.map(i=>picks[i])); };
  draw(); window.__prep=()=>startNight(picks.slice(0,3));
 }
-function startNight(toks){ toks.forEach(t=>giveLoot(t,true)); G.log=[]; G._newLog=0; G.min=0; siren(); setNav(true);
- show({loc:"🚨 19:00",text:"ไซเรนดังยาวสามครั้ง เสียงประกาศจากลำโพงทุกเสา “ขณะนี้เวลาสิบเก้านาฬิกา กฎหมายทุกฉบับถูกระงับใช้เป็นเวลาสิบสองชั่วโมง ขอให้ทุกท่านโชคดี”\n\nแล้วทั้งเมืองก็เงียบ เงียบอยู่ประมาณสิบวินาที",narr:"กฎปีนี้: "+G.ruleText+(META.runs<=2?"\n\nเป้าหมาย: ไปให้ถึง 🏠 ก่อน 07:00 แต่ละจุดเลือกว่าจะไปทางไหนต่อ หรือทำอะไรที่นั่นก่อน ทุกอย่างใช้เวลา":""),k:"toast",log:false,delta:false,choices:[{l:"▶ ไป",primary:true,k:"cont",go:flow}]}); }
+function startNight(toks){ toks.forEach(t=>giveLoot(t,true)); G.log=[]; G._newLog=0; G.min=0; siren(); ambStart(); setNav(true);
+ show({ic:"🚨",flash:2,loc:"🚨 19:00",text:"ไซเรนดังยาวสามครั้ง เสียงประกาศจากลำโพงทุกเสา “ขณะนี้เวลาสิบเก้านาฬิกา กฎหมายทุกฉบับถูกระงับใช้เป็นเวลาสิบสองชั่วโมง ขอให้ทุกท่านโชคดี”\n\nแล้วทั้งเมืองก็เงียบ เงียบอยู่ประมาณสิบวินาที",narr:"กฎปีนี้: "+G.ruleText+(META.runs<=2?"\n\nเป้าหมาย: ไปให้ถึง 🏠 ก่อน 07:00 แต่ละจุดเลือกว่าจะไปทางไหนต่อ หรือทำอะไรที่นั่นก่อน ทุกอย่างใช้เวลา":""),k:"toast",log:false,delta:false,choices:[{l:"▶ ไป",primary:true,k:"cont",go:flow}]}); }
 //========================= BOT (smoke test) =========================
 window.runBot=function(n,smart){ window.__BOT=true; const out={ends:{},err:[],stuck:0,arr:0,alive:0,n};
  for(let r=0;r<n;r++){ try{ newRun(chance(.5)?"m":"f",false); window.__prep(); let st=0;

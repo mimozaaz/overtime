@@ -514,6 +514,84 @@ const ENDINGS={
 };
 const END_ORDER=["home","raided","dawn","love","secret","gang","broadcast","hunter","betray","dead"];
 
+
+//========================= AREAS: จุดย่อยในแต่ละสถานที่ (v3 exploration) =========================
+// ex tags: f=ถนน(road) b=ซอย(soi) c=ทางรถใหญ่(hwy) w=คลอง r=ราง u=ท่อ   sn=ทางออกลับ เงียบ ไม่ผ่านด่าน
+const S_=(id,n,ic,d,o)=>({id,n,ic,d,ex:[],...(o||{})});
+const AREAS={
+ tall:[
+  S_("lobby","โถงชั้นล่าง","🚪",["กระจกประตูหน้าแตกละเอียดเต็มพื้น เหยียบทีไรดังกรอบ ไฟฉุกเฉินสีเขียวกะพริบเหนือป้ายทางออก","โซฟารับแขกถูกลากมาขวางประตู มีรอยมือเปื้อนเลือดบนกระจก นับได้ห้านิ้วชัดเจน"],{ex:["f","u"],hide:"หลังเคาน์เตอร์",srch:"รื้อเคาน์เตอร์ด้านหน้า",lm:.8}),
+  S_("stairs","บันไดหนีไฟ","🪜",["บันไดคอนกรีตวนลงไปในความมืด เสียงฝีเท้าตัวเองสะท้อนกลับมาเหมือนมีคนเดินตาม","ประตูหนีไฟชั้นบนถูกมัดด้วยโซ่ แต่ทางลงยังไปได้ มีรองเท้าแตะข้างเดียววางอยู่กลางขั้นบันได"],{ex:["b"],sn:true,hide:"ใต้ขั้นบันได"}),
+  S_("upper","ชั้นบน","🚪",["ทางเดินยาว ประตูห้องปิดเกือบทุกบาน บางบานมีเสียงทีวีเปิดเบาๆ บางบานเงียบเกินไป","ห้องหนึ่งแง้มอยู่ มีแสงเทียนลอดออกมา กับกลิ่นข้าวที่ยังอุ่น"],{hide:"ในห้องที่ล็อกได้",srch:"ไล่ค้นทีละห้อง",lm:1.35,rk:.1,acts:["barricade"]}),
+  S_("roof","ดาดฟ้า","🌃",["ลมแรง เมืองทั้งเมืองอยู่ใต้เท้า เห็นไฟไหม้สามสี่จุด เสียงปืนลอยมาตามลม","ถังน้ำสแตนเลสเรียงแถว ใต้ถังมีผ้าห่มกับขวดน้ำ มีคนเคยมาซ่อนที่นี่"],{ex:["f","b"],sn:true,exv:"ไต่ข้ามไปตึกข้างๆ แล้วลงทางนั้น",hide:"หลังถังน้ำ",acts:["lookout"]}),
+  S_("park","ลานจอดรถใต้ดิน","🅿️",["รถจอดเรียงในความมืด สัญญาณกันขโมยคันหนึ่งดังวนไม่หยุด","ไฟนีออนดวงเดียวที่ยังติด กะพริบเหนือรถเก๋งที่ประตูเปิดค้าง กุญแจห้อยอยู่ หรือเป็นกับดัก"],{ex:["c","f"],hide:"ใต้ท้องรถ",srch:"ไล่เปิดรถหากุญแจ",acts:["hotwire","siphon"]}),
+ ],
+ shop:[
+  S_("front","หน้าร้าน","🏪",["ชั้นวางล้มระเนระนาด ของกระจายเต็มพื้น เครื่องเก็บเงินถูกงัดอ้าปากค้าง","ไฟในตู้แช่ยังสว่าง เป็นแสงเดียวทั้งซอย ใครยืนตรงนี้ก็เห็นจากไกล"],{ex:["f","c"],hide:"หลังเคาน์เตอร์",srch:"กวาดของที่เหลือบนชั้น"}),
+  S_("store","ห้องเก็บของหลังร้าน","📦",["ลังของซ้อนสูงเกือบถึงเพดาน กลิ่นอับชื้นปนกลิ่นอะไรบางอย่างที่เน่า","ประตูเหล็กหนา ล็อกจากข้างในได้ มีเก้าอี้พลาสติกกับขวดน้ำครึ่งขวด เหมือนมีคนเพิ่งลุกไป"],{hide:"หลังกองลัง",srch:"รื้อลังของ",lm:1.4,rk:.08,acts:["barricade"]}),
+  S_("upst","ห้องพักชั้นบน","🛏️",["ห้องของเจ้าของร้าน ที่นอนยังยับ รูปครอบครัวบนผนังถูกกลับหัวทุกรูป","หน้าต่างบานเล็กมองลงไปเห็นถนนทั้งสาย มีคนเดินวนอยู่ข้างล่างสองสามคน"],{hide:"ในตู้เสื้อผ้า",srch:"ค้นตู้กับลิ้นชัก",lm:1.1,acts:["lookout"]}),
+  S_("alley","ตรอกหลังร้าน","🕳️",["ถังขยะเรียงแถว น้ำเน่าเจิ่งนอง หนูวิ่งผ่านเท้าแล้วหยุดหันมามอง","ตรอกแคบจนไหล่แทบชนกำแพง ปลายตรอกมีฝาท่อเปิดค้าง"],{ex:["b","u","r","w"],sn:true,hide:"ในถังขยะใบใหญ่",srch:"คุ้ยถังขยะ",lm:.6}),
+ ],
+ ind:[
+  S_("gate","ประตูรั้วหน้า","🚧",["รั้วเหล็กถูกชนพังเป็นรูโหว่ ป้อมยามว่าง วิทยุสื่อสารยังส่งเสียงซ่าอยู่บนโต๊ะ","ไฟสปอตไลต์ส่องลานโล่ง ใครเดินผ่านกลางลานคือเป้า"],{ex:["f","c"],hide:"ในป้อมยาม",srch:"ค้นป้อมยาม",lm:.8}),
+  S_("floor","ในอาคาร","🏭",["เครื่องจักรนิ่งสนิท เงาของมันพาดพื้นเหมือนสัตว์ตัวใหญ่หมอบอยู่","เสียงหยดน้ำจากหลังคาดังเป็นจังหวะ บางจังหวะไม่ใช่เสียงน้ำ"],{hide:"หลังเครื่องจักร",srch:"ค้นตามโต๊ะช่าง",lm:1.35,rk:.1}),
+  S_("office","ห้องหัวหน้างาน","🗄️",["ตู้เอกสารถูกรื้อกระจาย มีตู้เซฟใบเล็กยังปิดอยู่มุมห้อง","ปฏิทินบนผนังวงกลมแดงวันนี้ไว้ เขียนตัวโตว่า อย่ามาทำงาน"],{hide:"ใต้โต๊ะทำงาน",srch:"งัดลิ้นชักโต๊ะ",lm:1.2,acts:["barricade"]}),
+  S_("yard","ลานจอดรถขนของ","🚛",["รถกระบะกับรถบรรทุกจอดเรียง บางคันยางแบน บางคันยังเสียบกุญแจ","ถังน้ำมันเรียงชิดกำแพง กลิ่นน้ำมันแรงจนแสบจมูก"],{ex:["c"],hide:"ใต้รถบรรทุก",srch:"ค้นตามรถ",acts:["hotwire","siphon"]}),
+  S_("fence","รั้วด้านหลัง","🌿",["หญ้ารกท่วมเข่า รั้วลวดหนามมีช่องที่ใครสักคนตัดไว้","ท่อน้ำทิ้งไหลลงคูหลังอาคาร กลิ่นสารเคมีฉุนขึ้นจมูก"],{ex:["b","u","r","w"],sn:true,hide:"ในพงหญ้า"}),
+ ],
+ comm:[
+  S_("road","ถนนสายกลาง","🛣️",["ไฟถนนดับทุกต้น บ้านทุกหลังปิดประตู แต่ม่านบางบานขยับตอนเดินผ่าน","มีรถจอดขวางกลางถนน ประตูทุกบานเปิดค้าง ไม่มีคนอยู่"],{ex:["f","c"],hide:"หลังรถที่จอดทิ้ง",srch:"ค้นรถที่จอดทิ้ง",lm:.8,acts:["hotwire"]}),
+  S_("house","บ้านที่ประตูเปิดค้าง","🏠",["โต๊ะกินข้าวยังมีอาหารวางอยู่ครบสี่ที่ เก้าอี้ล้มไปหนึ่งตัว","ทีวีเปิดช่องประกาศของรัฐ เป็นภาพนิ่งรูปธงชาติ มีเสียงซ่าเบาๆ"],{hide:"ใต้เตียง",srch:"ค้นทั่วบ้าน",lm:1.4,rk:.12,acts:["barricade"]}),
+  S_("hall","ลานกลาง","⛩️",["ศาลาโล่ง มีคนเอาเสื่อมาปูนอนรวมกันไว้ แต่ตอนนี้ไม่เหลือใครแล้ว","ลำโพงเสียงตามสายเปิดเพลงเดิมวนซ้ำ ดังเกินไปสำหรับคืนแบบนี้"],{srch:"ค้นข้าวของที่คนทิ้งไว้",lm:.9,acts:["lookout"]}),
+  S_("back","ทางเดินหลังบ้าน","🌿",["ทางเดินแคบระหว่างรั้วบ้าน หมาบ้านเห่าลั่นแล้วเงียบไปกะทันหัน","สวนกล้วยหลังบ้าน ใบกล้วยไหวทั้งที่ไม่มีลม"],{ex:["b","u","r","w"],sn:true,hide:"ในพุ่มไม้"}),
+ ],
+ road:[
+  S_("open","กลางถนน","🚦",["ถนนโล่งยาวสุดตา ไฟจราจรยังเปลี่ยนสีอยู่ทั้งที่ไม่มีรถสักคัน","รถที่ถูกเผายังมีควันลอย ยางละลายติดพื้น"],{ex:["f","c"],srch:"ค้นรถที่ถูกทิ้ง",lm:.8,acts:["hotwire","siphon"]}),
+  S_("wreck","ซากรถชนกัน","🚗",["รถสามคันชนกันเป็นกอง คนขับคันหน้ายังคาเข็มขัด ไม่ขยับ","รถตู้นอนตะแคง ข้างในมีกระเป๋าเดินทางเปิดอ้า เสื้อผ้าเด็กกระจาย"],{hide:"ใต้ซากรถ",srch:"ค้นซากรถ",lm:1.3,rk:.1}),
+  S_("shade","ในเงามืดใต้ตอม่อ","🌫️",["เสาตอม่อต้นใหญ่เรียงเป็นแถว เงามืดหนาจนมองไม่เห็นมือตัวเอง","มีที่นอนกระดาษลังของคนไร้บ้าน ยังอุ่นอยู่"],{hide:"หลังเสาตอม่อ",srch:"ค้นข้าวของคนไร้บ้าน",lm:.7}),
+  S_("side","ทางเท้าข้างทาง","🚶",["ทางเท้าแคบติดรั้วสังกะสี มีรูพอให้มุดเข้าซอยได้","คูน้ำข้างทางมีสะพานไม้เล็กๆ ข้ามไปอีกฝั่ง"],{ex:["b","u","r","w"],sn:true}),
+ ],
+ open:[
+  S_("path","ทางเดินดิน","🌾",["ทางดินยาวหายไปในความมืด หิ่งห้อยกะพริบเหมือนไม่มีอะไรเกิดขึ้น","เสียงจิ้งหรีดดังทั่ว แล้วหยุดพร้อมกันทั้งทุ่ง"],{ex:["f","c"]}),
+  S_("shed","เพิงพัก","🛖",["เพิงหลังคาสังกะสี มีแคร่ไม้กับกาต้มน้ำที่ยังอุ่น","กระท่อมเฝ้าสวน ประตูไม้ไผ่ปิดอยู่ มีเงาขยับข้างใน"],{hide:"ใต้แคร่",srch:"ค้นในเพิง",lm:1.25,rk:.08,acts:["barricade"]}),
+  S_("water","ริมน้ำ","🌊",["น้ำนิ่งสะท้อนแสงไฟไหม้ไกลๆ ตลิ่งลื่นเป็นโคลน","เสียงน้ำกระเพื่อม เหมือนมีอะไรเพิ่งลงน้ำไป"],{ex:["w","r","b"],srch:"ค้นตามตลิ่ง",lm:.7}),
+  S_("brush","พงหญ้ารก","🌿",["หญ้าสูงท่วมหัว เดินแล้วเสียงดังซู่ซ่า ใครอยู่ใกล้ก็ได้ยิน","ต้นไม้ใหญ่รากโผล่ มีโพรงพอให้คนเข้าไปนั่งได้"],{ex:["u","b"],sn:true,hide:"ในโพรงไม้"}),
+ ],
+};
+const AREA_OF={office:"tall",hospital:"tall",mall:"tall",flat:"tall",police:"tall",school:"tall",
+ seven:"shop",shophouse:"shop",bar:"shop",market:"shop",clinic:"shop",gym:"shop",fireworks:"shop",gas:"shop",terminal:"shop",
+ factory:"ind",warehouse:"ind",site:"ind",junkyard:"ind",
+ village:"comm",rich:"comm",slum:"comm",temple:"comm",cemetery:"comm",
+ highway:"road",street:"road",bridge:"road",underpass:"road",alley:"road",station:"road",carpark:"road",
+ field:"open",orchard:"open",park:"open",pier:"open",drain:"open"};
+// ชื่อจุดเฉพาะสถานที่ (ถ้าไม่ระบุ ใช้ชื่อกลางของแม่แบบ)
+const SPOT_N={
+ hospital:{lobby:"ห้องฉุกเฉิน",upper:"วอร์ดผู้ป่วยชั้นสาม",park:"ลานจอดรถพยาบาล"},
+ school:{lobby:"โรงอาหาร",upper:"ห้องเรียนชั้นสอง",roof:"ดาดฟ้าตึกเรียน",park:"ลานจอดรถครู"},
+ mall:{lobby:"ทางเข้าห้าง",upper:"โซนร้านค้าชั้นสาม",park:"ลานจอดรถห้าง"},
+ police:{lobby:"ห้องร้อยเวร",upper:"ห้องขังกับห้องเก็บของกลาง",park:"ลานจอดรถสายตรวจ"},
+ flat:{lobby:"ใต้ถุนแฟลต",upper:"ทางเดินชั้นเจ็ด",park:"ลานจอดมอไซค์"},
+ office:{lobby:"ล็อบบี้",upper:"ชั้นสำนักงาน",park:"ลานจอดรถใต้ตึก"},
+ gas:{front:"ลานหัวจ่าย",store:"มินิมาร์ทในปั๊ม",upst:"ห้องพักพนักงาน"},
+ market:{front:"แผงเขียงหมู",store:"ห้องเย็นเก็บของ",upst:"ห้องเช่าเหนือตลาด",alley:"ทางระบายน้ำหลังตลาด"},
+ bar:{front:"หน้าบาร์",store:"หลังเคาน์เตอร์เหล้า",upst:"ห้อง VIP ชั้นบน"},
+ terminal:{front:"ชานชาลารถทัวร์",store:"ห้องขายตั๋ว",upst:"ห้องพักคนขับ"},
+ temple:{road:"ลานวัด",house:"กุฏิพระ",hall:"ศาลาการเปรียญ",back:"ทางเดินหลังเมรุ"},
+ cemetery:{road:"ทางเข้าป่าช้า",house:"ศาลาสวดศพ",hall:"ลานเมรุ",back:"แนวหลุมศพ"},
+ rich:{road:"ถนนหน้าคฤหาสน์",house:"คฤหาสน์ที่ประตูเปิดค้าง",hall:"สโมสรหมู่บ้าน"},
+ slum:{road:"ทางเดินกลางชุมชน",house:"บ้านไม้ที่ประตูเปิดค้าง",hall:"ลานเล่นตะกร้อ"},
+ station:{open:"ชานชาลา",wreck:"ตู้รถไฟที่จอดทิ้ง",side:"ทางเดินเลียบราง"},
+ bridge:{open:"กลางสะพาน",shade:"ใต้สะพาน",side:"ราวสะพานด้านข้าง"},
+ highway:{open:"ไหล่ทางหลวง",shade:"ใต้ป้ายทางด่วน"},
+ carpark:{open:"ทางเข้าลานจอด",wreck:"แถวรถที่จอดทิ้ง"},
+ pier:{path:"สะพานท่าเรือ",shed:"เพิงขายตั๋วเรือ",water:"โป๊ะเรือ"},
+ park:{path:"ลู่วิ่ง",shed:"ห้องน้ำสาธารณะ",water:"ริมบึง"},
+ junkyard:{floor:"กองซากรถ",yard:"ลานรถรอแยกชิ้น"},
+ site:{floor:"โครงตึกที่สร้างไม่เสร็จ",office:"ตู้คอนเทนเนอร์สำนักงาน"},
+};
+const ETAG={road:"f",soi:"b",hwy:"c",canal:"w",rail:"r",sewer:"u"};
+const EXV={f:"ออกทางถนนด้านหน้า",b:"ลัดเข้าซอยด้านหลัง",c:"ออกทางถนนใหญ่",w:"ลงไปตามคลอง",r:"เดินตามรางรถไฟ",u:"มุดท่อระบายน้ำ"};
+
 //========================= EVENT CARDS (data) =========================
 // K(id, where, text, choices, opt)   choice: [label, skill, p, [okText,fx], [badText,fx], copt]
 const CARDS=[]; const K=(id,at,t,c,o)=>CARDS.push({id,at,t,c,...(o||{})});
@@ -1246,13 +1324,13 @@ function dangerWord(o){
  if(!G.vis[o.to]) return "❓ ไม่รู้ว่ามีอะไรรอ";
  const d=dangerLv(o); return d<=0?"🟢 น่าจะเงียบ":d<=1?"🟡 เสี่ยงนิดหน่อย":d===2?"🟠 อันตราย":"🔴 อันตรายมาก";
 }
-function routeChoice(o,i,rec){
- const pl=place(o.n), dark=G.phoneBat<=0;
- const way={road:"ถนน",soi:"ซอยเล็ก เงียบกว่า",hwy:"ทางหลวง เร็วแต่โล่ง",canal:"นั่งเรือไปตามคลอง",rail:"เดินตามรางรถไฟ เงียบ",sewer:"มุดท่อ เงียบมากแต่หลอน"}[o.e.t];
- let sub=(dark?"":`⏱ ${o.min} นาที • `)+way+"\n"+dangerWord(o);
+function routeChoice(o,i,sp){
+ const pl=place(o.n), dark=G.phoneBat<=0, t=ETAG[o.e.t], sn=!!(sp&&sp.sn);
+ const how=sn&&sp.exv?sp.exv:EXV[t];
+ let sub=how+(sn?" • 🤫 ทางลับ ไม่ผ่านด่าน":"")+(dark?"":` • ⏱ ${o.min} นาที`)+"\n"+dangerWord(o);
  if(o.note) sub+=` • ⚠️ ${o.note}`; if(o.runOut) sub+=" • ⚠️ น้ำมันไม่พอ ต้องเดินต่อ";
- const back=o.fwd<0, side=o.fwd===0;
- return {l:`${back?"↩︎ ถอยกลับไป ":side?"↔︎ อ้อมไป ":""}${pl.n}${o.n.p==="home"?" (บ้าน!)":""}`,ic:pl.ic,sub,dis:!o.ok,route:true,primary:!!rec,badge:rec?"👍 น่าไปสุด":"",k:"travel",meta:o,go:()=>travel(o)};
+ const dir=o.fwd>0?"มุ่งหน้าบ้าน → ":o.fwd<0?"↩︎ ถอยกลับไป ":"↔︎ อ้อมไป ";
+ return {l:`${dir}${pl.n}${o.n.p==="home"?" (บ้าน!)":""}`,ic:pl.ic,sub,dis:!o.ok,route:true,k:"travel",meta:o,go:()=>travel({...o,sn})};
 }
 function allRoutes(){ return adj(G.at).map(travelInfo).sort((a,b)=>b.fwd-a.fwd||a.min-b.min); }
 function tripStrip(){
@@ -1260,46 +1338,51 @@ function tripStrip(){
  for(let l=0;l<=L;l++){ if(l>0) h+=`<i class="${l<=cl?"d":""}"></i>`; h+=l===cl?"<b>📍</b>":l===L?"<b>🏠</b>":l<cl?"<span style='color:var(--red)'>●</span>":"<span style='color:#5a4a4d'>○</span>"; }
  return h+`</div><div class="trip-cap"><span>ผ่านมา ${G.map.km-kmLeft()} กม.</span><span>เหลือ ${kmLeft()} กม. • ต้องถึงก่อน 07:00</span></div></div>`;
 }
+function tripStrip(){
+ const L=G.map.L, cl=node().l; let h=`<div class="panel" style="padding:10px 14px"><div class="trip">`;
+ for(let l=0;l<=L;l++){ if(l>0) h+=`<i class="${l<=cl?"d":""}"></i>`; h+=l===cl?"<b>📍</b>":l===L?"<b>🏠</b>":l<cl?"<span style='color:var(--red)'>●</span>":"<span style='color:#5a4a4d'>○</span>"; }
+ return h+`</div><div class="trip-cap"><span>ผ่านมา ${G.map.km-kmLeft()} กม.</span><span>เหลือ ${kmLeft()} กม. • ต้องถึงก่อน 07:00</span></div></div>`;
+}
 function nodeMenu(){
- lookAround(); saveRun();
- const n=node(), pl=place(n), kit=G.inv.includes("ชุดปฐมพยาบาล"), hurt=G.bleed>0||G.hp<G.hpMax;
- const all=allRoutes(); let main=all.filter(o=>o.fwd>0); if(!main.some(o=>o.ok)) main=all.filter(o=>o.ok);
- main=main.sort((a,b)=>(b.ok-a.ok)).slice(0,3);
- const okm=main.filter(o=>o.ok), best=okm.slice().sort((a,b)=>dangerLv(a)*35+a.min-(dangerLv(b)*35+b.min))[0];
- const SEC="🧭 ไปต่อทางไหน";
- const ch=main.map((o,i)=>({...routeChoice(o,i,o===best),sec:SEC}));
+ lookAround();
+ const n=node(), pl=place(n), A=areaOf(n), sp=curSpot(), st=spState(sp.id), kit=G.inv.includes("ชุดปฐมพยาบาล"), hurt=G.bleed>0||G.hp<G.hpMax;
+ const firstHere=!G._seenNode||G._seenNode!==G.at; G._seenNode=G.at; st.v=1; saveRun();
+ let text=(G._trans?G._trans+"\n\n":"")+pick(sp.d).replace(/\{P\}/g,pl.n);
+ if(firstHere) text=ambience()+"\n\n"+text;
+ if(n.fire) text+="\n\n🔥 ไฟกำลังลามมาถึงตรงนี้ ควันแสบตา อยู่ต่อไม่ได้แล้ว";
+ G._trans=null;
+ const ch=[], HERE="👀 ตรงนี้ทำอะไรได้", WALK=`🚶 เดินไปจุดอื่นใน${pl.n}`, OUT="🧭 ออกจากที่นี่";
  if(!n.fire){
-  const A="📍 หรือทำอะไรที่นี่ก่อน (ทุกอย่างกินเวลา)";
-  ch.push({l:"ค้นของ",ic:"🔍",half:true,sec:A,sub:`20 นาที • ${n.loot>=67?"ของน่าจะเยอะ":n.loot>=34?"เหลือบ้าง":n.loot>0?"แทบไม่เหลือ":"ค้นหมดแล้ว"}`,dis:n.loot<=0,k:"search",go:aSearch});
-  ch.push({l:"ทำแผล",ic:"🩹",half:true,sec:A,sub:hurt?`15 นาที • ${kit?"มีชุดปฐมพยาบาล":"ไม่มีชุดปฐมพยาบาล"}`:"ยังไม่เจ็บ",dis:!hurt,k:"heal",go:aHeal});
-  ch.push({l:"ซ่อนพัก",ic:"🫥",half:true,sec:A,sub:"30 นาที • หายเหนื่อย",k:"hide",go:aHide});
-  ch.push({l:"หาคน",ic:"🧍",half:true,sec:A,sub:"20 นาที • อาจได้เพื่อนหรือของ",k:"seek",go:aSeek});
-  if(G.phoneBat>3) ch.push({l:"📻 ฟังข่าว",mini:true,sec:A,k:"radio",go:aRadio});
-  if(G.phoneBat>0) ch.push({l:"🗺️ แผนที่",mini:true,sec:A,k:"mapview",go:mapScreen});
-  if(all.length>main.length) ch.push({l:"↔︎ ทางอื่น",mini:true,sec:A,k:"more",go:moreMenu});
-  ch.push({l:"❓ วิธีเล่น",mini:true,sec:A,k:"helpview",go:helpScreen});
+  if(sp.srch) ch.push({l:`🔍 ${sp.srch}`,sec:HERE,sub:`20 นาที • ${lootWord(st.l)} • อาจเจอคน`,dis:st.l<=0,k:"search",go:aSearch});
+  (sp.acts||[]).forEach(a=>{ const D=ACTS[a]; if(!st.u[a]&&D.ok(sp)) ch.push({l:D.l,sec:HERE,sub:D.sub(),k:a,go:D.go}); });
+  if(hurt) ch.push({l:"🩹 ทำแผลตรงนี้",sec:HERE,sub:`15 นาที • ${kit?"มีชุดปฐมพยาบาล ได้เลือดคืนเยอะ":"ไม่มีชุดปฐมพยาบาล ได้แค่ห้ามเลือด"}`,k:"heal",go:aHeal});
+  if(sp.hide) ch.push({l:`🫥 หลบ${sp.hide}พักสักครู่`,sec:HERE,sub:"30 นาที • หายเหนื่อย คนตามรอยยากขึ้น",k:"hide",go:aHide});
+  useItemCh().forEach(c=>ch.push({...c,sec:HERE}));
+  ch.push({l:"🧍 มองหาคนแถวนี้",sec:HERE,sub:"20 นาที • อาจได้เพื่อนร่วมทาง พ่อค้า หรือเจอเรื่อง",k:"seek",go:aSeek});
+  A.filter(x=>x.id!==sp.id).forEach(x=>{ const xs=spState(x.id), ex=exitsAt(x); const fw=ex.some(o=>o.fwd>0&&o.ok);
+   ch.push({l:`${x.ic} ${x.n}`,half:true,sec:WALK,sub:(xs.v?"เคยดูแล้ว":"ยังไม่ได้ดู")+(fw?" • มีทางไปต่อ":ex.length?" • มีทางออก":""),k:"spot",meta:{fwd:fw?1:0,id:x.id},go:()=>goSpot(x.id)}); });
  }
- const help=META.runs<=2&&G.moves<2?"\n\n👇 เลือกทางไปต่อด้านล่าง ปุ่มแดงคือทางที่ดูดีที่สุดตอนนี้ ไปถึง 🏠 ให้ได้ก่อน 07:00":"";
- show({ic:pl.ic,loc:`📍 ${pl.n}${n.fire?" • 🔥 กำลังไหม้":""}`,text:ambience()+help,html:tripStrip(),k:"menu",choices:ch});
+ let ex=n.fire?allRoutes():exitsAt(sp); ex=ex.sort((a,b)=>b.fwd-a.fwd||a.min-b.min);
+ ex.forEach(o=>ch.push({...routeChoice(o,0,n.fire?null:sp),sec:OUT}));
+ if(!ex.length) ch.push({l:"จากจุดนี้ไม่มีทางออกไปที่อื่น",sub:"ต้องเดินไปจุดอื่นก่อน",sec:OUT,dis:true,k:"x",go:()=>{}});
+ if(G.phoneBat>3) ch.push({l:"📻 ฟังข่าว",mini:true,sec:OUT,k:"radio",go:aRadio});
+ if(G.phoneBat>0) ch.push({l:"🗺️ แผนที่",mini:true,sec:OUT,k:"mapview",go:mapScreen});
+ ch.push({l:"❓ วิธีเล่น",mini:true,sec:OUT,k:"helpview",go:helpScreen});
+ const help=META.runs<=2&&G.moves<1&&firstHere?"\n\n👇 สำรวจจุดต่างๆ ในที่นี้ได้ตามใจ หาของ หารถ แล้วเลือกทางออกที่จะพาเข้าใกล้บ้าน แต่ละทางออกอยู่คนละจุด":"";
+ show({ic:sp.ic,loc:`📍 ${pl.n} • ${sp.n}${n.fire?" • 🔥 กำลังไหม้":""}`,text:text+help,html:tripStrip(),k:"menu",choices:ch});
 }
-function moreMenu(){
- const all=allRoutes(), main=all.filter(o=>o.fwd>0).slice(0,3), rest=all.filter(o=>!main.includes(o));
- const ch=rest.map((o,i)=>routeChoice(o,9,false));
- if(!ch.length) ch.push({l:"ไม่มีทางอื่นจากตรงนี้",dis:true,k:"x",go:()=>{}});
- ch.push({l:"← กลับ",ghost:true,k:"back",go:nodeMenu});
- show({loc:"↔︎ ทางอื่น",text:"ทางพวกนี้ไม่ได้พาเข้าใกล้บ้าน แต่บางทีการอ้อมก็ดีกว่าการตาย",k:"more",log:false,delta:false,choices:ch});
-}
+function moreMenu(){ nodeMenu(); }
 function helpScreen(){
- show({loc:"❓ วิธีเล่น",log:false,delta:false,k:"help",text:"🎯 เป้าหมายเดียว: ไปให้ถึง 🏠 ก่อน 07:00 แบบยังมีชีวิต\n\n1️⃣ ทุกจุด เลือกว่าจะ “ไปต่อทางไหน” ทางที่เป็นปุ่มแดงคือทางที่ดูดีที่สุด\n2️⃣ ระหว่างทางจะเจอเหตุการณ์ อ่านแล้วเลือกว่าจะทำอะไร ป้ายขวามือบอกว่า “น่าจะได้ / ลุ้น / เสี่ยงมาก”\n3️⃣ ถ้ามีแถบเวลาวิ่ง ต้องรีบเลือก ไม่งั้นตัวจะแข็งเอง\n\n❤️ หัวใจหมด = ตาย • ถ้าเจ็บให้กด 🩹 ทำแผล\n😮‍💨 เหนื่อยมาก = หนีไม่พ้น • กด 🫥 ซ่อนพัก\n🚶 เดินเท้าไปไม่ทันแน่ ต้อง 🔍 ค้นหารถ (ลานจอดรถ ปั๊ม สุสานรถ)\n💬 ปุ่มแชตด้านล่าง คือคนที่รอเราอยู่ ยิ่งไปช้า ที่บ้านยิ่งอันตราย\n🎯 มีคนหนึ่งตามล่าเราทั้งคืน อยู่ที่เดิมนานๆ มันจะตามทัน",choices:[{l:"← กลับ",primary:true,k:"back",go:nodeMenu}]});
+ show({loc:"❓ วิธีเล่น",log:false,delta:false,k:"help",text:"🎯 เป้าหมายเดียว: ไปให้ถึง 🏠 ก่อน 07:00 แบบยังมีชีวิต\n\n🚶 แต่ละที่มีหลายจุดให้เดินสำรวจ เช่น ชั้นบน ดาดฟ้า ลานจอดรถ ตรอกหลังร้าน แต่ละจุดมีของ มีคน มีอันตรายต่างกัน\n🧭 ทางออกไปที่อื่นอยู่คนละจุด ออกทางลานจอดรถไปทางหลวง ออกทางตรอกหลังร้านเข้าซอย ทางลับ 🤫 เงียบกว่าและไม่ต้องผ่านด่าน\n⚡ เจอเหตุการณ์ อ่านแล้วเลือก ตัวเลือกจะเพิ่มขึ้นตามของในกระเป๋า คนที่มาด้วย และอาชีพ ถ้ามีแถบเวลาวิ่ง ต้องรีบเลือก\n\n❤️ หัวใจหมด = ตาย • เจ็บให้ทำแผล\n😮‍💨 เหนื่อยมาก = หนีไม่พ้น • หาที่หลบพัก\n🚗 เดินเท้าไปไม่ทัน ต้องหารถ (ลานจอดรถ ลานขนของ ถนน) หรือต่อสายรถเอง\n💬 แชตด้านล่างคือคนที่รอ ยิ่งไปช้า ที่บ้านยิ่งอันตราย\n🎯 มีคนหนึ่งตามล่าเราทั้งคืน อยู่ที่เดิมนาน มันจะตามทัน",choices:[{l:"← กลับ",primary:true,k:"back",go:nodeMenu}]});
 }
 function aSearch(){
- const n=node(), pl=place(n); passTime(20); G.noise=clamp(G.noise+1,0,10);
- const risk=clamp(.14+pl.d*.07+G.noise*.02-sk("sneak")*.04+(phase().k==="hell"?.08:0),.04,.6);
- const tries=1+(sk("scav")>=2?1:0), got=[];
- for(let i=0;i<tries+1;i++){ if(chance(clamp(.5+sk("scav")*.1+(G.inv.includes("ไฟฉาย")?.08:0)-(G.rule.blackout?.12:0)-(100-n.loot)/250,.1,.92))){ const r=rollLoot(); if(r)got.push(r); } }
- n.loot=Math.max(0,n.loot-34);
- if(chance(risk)) return toast("🔍 ไม่ได้อยู่คนเดียว","กำลังรื้อของอยู่ก็ได้ยินเสียงลมหายใจที่ไม่ใช่ของตัวเอง มีคนอื่นค้นที่นี่อยู่ก่อนแล้ว และไม่อยากแบ่ง",()=>startCombat(pl.d>=2?"robber":"worker",{count:ri(1,2)}));
- toast("🔍 ค้นของ",got.length?"ได้มา: "+got.join(", "):"รื้อจนทั่ว ไม่เหลืออะไรที่ใช้ได้ เสียเวลาเปล่า");
+ const n=node(), pl=place(n), sp=curSpot(), st=spState(sp.id); passTime(20); G.noise=clamp(G.noise+1,0,10);
+ const risk=clamp(.12+pl.d*.06+(sp.rk||0)+G.noise*.02-sk("sneak")*.04+(phase().k==="hell"?.08:0),.04,.6);
+ const tries=1+(sk("scav")>=2?1:0)+((sp.lm||1)>=1.3?1:0), got=[];
+ for(let i=0;i<tries;i++){ if(chance(clamp((.5+sk("scav")*.1+(G.inv.includes("ไฟฉาย")?.08:0)-(G.rule.blackout?.12:0))*(sp.lm||1)-(100-st.l)/250,.08,.93))){ const r=rollLoot(); if(r)got.push(r); } }
+ st.l=Math.max(0,st.l-40); n.loot=Math.max(0,n.loot-12);
+ if(chance(risk)) return toast("🔍 ไม่ได้อยู่คนเดียว",(got.length?"ได้มา: "+got.join(", ")+"\n\n":"")+"กำลังรื้อของอยู่ก็ได้ยินเสียงลมหายใจที่ไม่ใช่ของตัวเอง มีคนอื่นอยู่ใน"+sp.n+"มาก่อนแล้ว และไม่อยากแบ่ง",()=>startCombat(pl.d>=2?"robber":"worker",{count:ri(1,2)}));
+ toast("🔍 "+sp.srch,got.length?"ได้มา: "+got.join(", "):"รื้อจนทั่ว ไม่เหลืออะไรที่ใช้ได้ เสียเวลาเปล่า");
 }
 function aHeal(){
  passTime(15); const i=G.inv.indexOf("ชุดปฐมพยาบาล"); let amt, t;
@@ -1314,7 +1397,7 @@ function aHide(){
  passTime(30); G.stamina=clamp(G.stamina+(G.age<=25?40:30),0,100); G.sanity=clamp(G.sanity+4,0,100); G.noise=Math.max(0,G.noise-3-sk("sneak"));
  if(G.inv.includes("ผ้าใบ")) G.noise=Math.max(0,G.noise-2);
  G.hunter.stun+=(sk("sneak")>=2?2:1);
- const i=G.inv.indexOf("อาหารกระป๋อง"); let t="หลบอยู่ในมุมมืด ฟังเสียงเมืองข้างนอก หัวใจค่อยๆ เต้นช้าลง";
+ const i=G.inv.indexOf("อาหารกระป๋อง"); const hs=curSpot().hide; let t=(hs?"มุดเข้าไปหลบ"+hs+" ":"หลบอยู่ในมุมมืด ")+"ฟังเสียงเมืองข้างนอก หัวใจค่อยๆ เต้นช้าลง";
  if(i>=0&&G.stamina<90){ G.inv.splice(i,1); G.stamina=clamp(G.stamina+20,0,100); G.hp=clamp(G.hp+5,0,G.hpMax); t+=" เปิดอาหารกระป๋องกินเงียบๆ"; }
  if(chance(clamp(.14-sk("sneak")*.04+place(node()).d*.03,.02,.3))) return toast("🫥 ถูกเจอ",t+"\n\nแล้วก็มีแสงไฟฉายส่องเข้ามาในที่ซ่อน",()=>startCombat("robber"));
  toast("🫥 ซ่อนตัว",t);
@@ -1337,6 +1420,51 @@ function aSeek(){
  if(r<.82) return drawCard(true);
  toast("🧍 ไม่มีใคร","เคาะประตูสามบ้าน ไม่มีใครขานรับ แต่รู้ว่ามีคนอยู่ ม่านขยับ");
 }
+
+//========================= EXPLORATION ENGINE =========================
+function areaOf(n){ n=n||node(); const k=AREA_OF[n.p]||"road", nm=SPOT_N[n.p]||{};
+ return AREAS[k].map(sp=>({...sp,n:nm[sp.id]||sp.n})); }
+function spState(id,nid){ nid=nid==null?G.at:nid; G.spx=G.spx||{}; const a=G.spx[nid]=G.spx[nid]||{}; return a[id]=a[id]||{l:100,u:{},v:0}; }
+function curSpot(){ const A=areaOf(); let sp=A.find(x=>x.id===G.spot); if(!sp){ sp=A[0]; G.spot=sp.id; } return sp; }
+function entrySpot(n,etype){ const A=areaOf(n), t=ETAG[etype]; return (A.find(x=>x.ex.includes(t)&&!x.sn)||A.find(x=>x.ex.includes(t))||A[0]).id; }
+function exitsAt(sp){ const A=areaOf(); return allRoutes().filter(o=>{ const t=ETAG[o.e.t]; const at=A.filter(x=>x.ex.includes(t)); return at.length?at.some(x=>x.id===sp.id):sp.id===A[0].id; }); }
+function lootWord(l){ return l>=67?"ของน่าจะเยอะ":l>=34?"เหลือบ้าง":l>0?"แทบไม่เหลือ":"ค้นหมดแล้ว"; }
+const TRANS=["ย่องไปตามทางมืด ทีละก้าว","เดินเลาะกำแพงไป หูคอยฟังทุกเสียง","ก้มตัวต่ำ ขยับไปเร็วๆ","ค่อยๆ แง้มประตูแล้วแทรกตัวผ่าน","หยุดฟังเสียงรอบตัวก่อน แล้วค่อยไปต่อ"];
+function goSpot(id){
+ const A=areaOf(), sp=A.find(x=>x.id===id); if(!sp) return nodeMenu();
+ passTime(4); G.spot=id; const st=spState(id), first=!st.v; st.v=1;
+ G._trans=pick(TRANS)+" มาถึง"+sp.n;
+ const ph=phase().k, p=clamp(.16+(sp.rk||0)+({early:0,deep:.05,hell:.12,dawn:.02})[ph]+(first?.06:-.08)+G.noise*.01,.04,.5);
+ if(chance(p)){ G._trans=null; return drawCard(); }
+ flow();
+}
+const ACTS={
+ hotwire:{ok:sp=>!VEHS[G.veh].motor,l:"🔧 ลองต่อสายรถสักคัน",sub:()=>`15 นาที • ได้รถ แต่รถอาจร้องลั่น${sk("tech")||sk("drive")?" • 👍 อาชีพคุณพอทำได้":""}`,go:aHotwire},
+ siphon:{ok:sp=>VEHS[G.veh].fuel&&G.fuel<85,l:"⛽ ดูดน้ำมันจากรถคันอื่น",sub:()=>"15 นาที • ได้น้ำมันเพิ่ม",go:aSiphon},
+ lookout:{ok:sp=>G.phoneBat>=0,l:"👀 มองลงไปดูทางข้างหน้า",sub:()=>"10 นาที • รู้ว่าทางไหนมีอะไร",go:aLookout},
+ barricade:{ok:sp=>true,l:"🚪 ขวางประตู แล้วนอนพักจริงๆ",sub:()=>"45 นาที • หายเหนื่อยเยอะ ใจชื้นขึ้น แต่เวลาเดิน",go:aBarricade},
+};
+function aHotwire(){ const st=spState(G.spot); st.u.hotwire=1; passTime(15);
+ const p=clamp(.35+sk("tech")*.13+sk("drive")*.08+(G.inv.includes("ไขควง")?.08:0),.1,.9);
+ if(chance(p)){ const v=pick(["เก๋ง","เก๋ง","มอไซค์","กระบะ"]); const r=takeVeh(v,ri(22,50)); return toast("🔧 ติดแล้ว",(r?"เครื่องสะอึกสองที แล้วก็ติด "+r:"ต่อสายติด แต่รถคันนี้ไม่ได้ดีกว่าที่มีอยู่ เลยปล่อยไว้")); }
+ G.noise=clamp(G.noise+4,0,10);
+ if(chance(.45)) return toast("🚨 สัญญาณกันขโมย","สายไฟแลบประกาย แล้วไซเรนรถก็ร้องลั่นทั้งลาน มีเสียงคนตะโกนตอบมาจากความมืด “ตรงนั้น!”",()=>startCombat("robber",{count:ri(1,2)}));
+ toast("🔧 ไม่ติด","ลองจนนิ้วถลอก เครื่องไม่ยอมติด เสียงไดสตาร์ทดังก้องไปทั้งลาน ต้องรีบไปจากตรงนี้");
+}
+function aSiphon(){ spState(G.spot).u.siphon=1; passTime(15); const f=ri(15,32); G.fuel=clamp(G.fuel+f,0,100); G.noise=clamp(G.noise+1,0,10); toast("⛽ ดูดน้ำมัน","เอาสายยางดูดจนน้ำมันเต็มปาก ถุยทิ้งแล้วกรอกใส่ถังจนได้มาพอสมควร"); }
+function aLookout(){ spState(G.spot).u.lookout=1; passTime(10); reveal(2+(sk("read")>=1?1:0)); let t="ไล่สายตาไปตามถนนทีละเส้น จำไว้ว่าตรงไหนมีไฟ ตรงไหนมีคนรวมกลุ่ม ตรงไหนเงียบเกินไป";
+ const H=G.hunter; if(!H.dead&&H.at!=null){ const p=bfs(H.at,G.at); if(p&&p.length<=4){ H.known=true; t+="\n\nแล้วก็เห็นมัน คนที่ตามมาทั้งคืน ยืนอยู่ไม่ไกล มันเงยหน้าขึ้นมองตรงมาที่นี่พอดี"; } }
+ toast("👀 มองดูทาง",t+"\n\n(แผนที่และป้ายอันตรายของทางข้างหน้าอัปเดตแล้ว)"); }
+function aBarricade(){ const sp=curSpot(); passTime(45); G.stamina=clamp(G.stamina+55,0,100); G.sanity=clamp(G.sanity+8,0,100); G.hp=clamp(G.hp+4,0,G.hpMax); G.noise=Math.max(0,G.noise-4); G.hunter.stun+=2;
+ if(chance(clamp(.08+place(node()).d*.03-sk("sneak")*.02,.03,.2))) return toast("🚪 มีคนงัดประตู","หลับไปได้ไม่ถึงครึ่งชั่วโมง ก็สะดุ้งตื่นเพราะเสียงลูกบิดหมุน ของที่ขวางไว้ค่อยๆ ถูกดันเข้ามา",()=>startCombat("robber"));
+ toast("🚪 พักใน"+sp.n,"ลากตู้มาขวางประตู นั่งพิงผนังในความมืด หลับไปโดยไม่รู้ตัว ตื่นมาอีกทีหัวใจเต้นช้าลงแล้ว"); }
+function useItemCh(){ const c=[], has=x=>G.inv.includes(x);
+ if(G.stamina<55&&has("อาหารกระป๋อง")) c.push({l:"🥫 เปิดกระป๋องกินก่อน",sub:"หายเหนื่อย",k:"use",go:()=>{invDo("use",G.inv.indexOf("อาหารกระป๋อง"));flow();}});
+ else if(G.stamina<55&&has("ขวดน้ำ")) c.push({l:"💧 ดื่มน้ำ",sub:"หายเหนื่อย",k:"use",go:()=>{invDo("use",G.inv.indexOf("ขวดน้ำ"));flow();}});
+ if(G.phoneBat<35&&has("พาวเวอร์แบงก์")) c.push({l:"🔋 ชาร์จมือถือ",sub:"ได้แชตต่อ ได้ดูแผนที่",k:"use",go:()=>{invDo("use",G.inv.indexOf("พาวเวอร์แบงก์"));flow();}});
+ if(VEHS[G.veh].fuel&&G.fuel<60&&has("แกลลอนน้ำมัน")) c.push({l:"⛽ เติมน้ำมันจากแกลลอน",k:"use",go:()=>{invDo("use",G.inv.indexOf("แกลลอนน้ำมัน"));flow();}});
+ return c; }
+
 //========================= MAP / TRAVEL =========================
 function mapScreen(){
  show({loc:"🗺️ แผนที่",text:"วงแดงคือตรงนี้ 🏠 คือปลายทาง (อยู่บนสุด) จุด ? คือที่ที่ยังไม่มีข้อมูล 💀 คือที่ที่มีรายงานแก๊ง",html:mapSVG(),k:"mapview",log:false,delta:false,choices:[{l:"← กลับ",primary:true,k:"back",go:nodeMenu}]});
@@ -1368,8 +1496,9 @@ function travel(o){
  if(T.sa) G.sanity=clamp(G.sanity+T.sa,0,100);
  G.moves++; const from=G.at;
  passTime(o.min);
- const done=()=>{ G.at=o.to; if(node().fire){ G.hp-=14; addLog("ฝ่าควันไฟเข้ามา สำลักจนแสบคอ","bad"); } arrive(); };
- if(e.blocked>0&&e.t!=="canal"&&e.t!=="sewer"&&e.t!=="rail") return evCheckpoint(done,()=>{ G.at=from; flow(); });
+ if(o.sn){ G.noise=Math.max(0,G.noise-2); passTime(5); }
+ const done=()=>{ G.at=o.to; G.spot=entrySpot(node(),e.t); if(node().fire){ G.hp-=14; addLog("ฝ่าควันไฟเข้ามา สำลักจนแสบคอ","bad"); } arrive(); };
+ if(e.blocked>0&&!o.sn&&e.t!=="canal"&&e.t!=="sewer"&&e.t!=="rail") return evCheckpoint(done,()=>{ G.at=from; flow(); });
  done();
 }
 function arrive(opt){
@@ -1378,9 +1507,10 @@ function arrive(opt){
  const H=G.hunter; if(!H.dead&&H.at===G.at) return flow();
  if(G.gangs.some(x=>x.at===G.at&&!x.met)) return flow();
  if(opt&&opt.noCard) return flow();
+ G._trans=pick(["เดินทางมาจนถึง","ในที่สุดก็มาถึง","ฝ่าความมืดมาจนถึง"])+place(node()).n+(curSpot().n?" ตรง"+curSpot().n:"");
  const due=G.chains.findIndex(c=>c.at<=G.moves); if(due>=0){ const id=G.chains.splice(due,1)[0].id; const c=CARDS.find(x=>x.id===id); if(c) return playCard(c); }
- const ph=phase().k, p=clamp(({early:.62,deep:.74,hell:.9,dawn:.7})[ph]+G.noise*.012,0,.96);
- if(chance(p)) return drawCard();
+ const ph=phase().k, p=clamp(({early:.4,deep:.5,hell:.62,dawn:.45})[ph]+G.noise*.012,0,.8);
+ if(chance(p)){ G._trans=null; return drawCard(); }
  flow();
 }
 //========================= CARDS =========================
@@ -1399,10 +1529,30 @@ function playCard(card){
  const pl=place(node());
  const ch=card.c.filter(c=>!c[5]||!c[5].req||c[5].req(G)).map(c=>({l:c[0],p:c[2]!=null?pOf(c[2],c[1]):null,k:"card",sub:c[1]&&sk(c[1])>0?"👍 อาชีพคุณถนัดเรื่องนี้":c[1]?SKW[c[1]]||"":"",go:()=>resolveChoice(card,c)}));
  if(!ch.length) return flow();
+ ctxOpts(card,ch.length).forEach(x=>ch.push(x));
  const ph=phase().k, autoT=!card.timer&&(ph==="hell"||(ph==="deep"&&chance(.35)))&&card.c.length>1&&!G.noMercy?Math.round(clamp(card.t.length/9+10,14,26)):0, T=card.timer||autoT;
  show({ic:pl.ic,loc:`${pl.ic} ${pl.n}${T?" • ⚠️ ต้องรีบตัดสินใจ":""}`,text:card.t,k:"card",choices:ch,flash:!!T,timer:T,onTimeout:()=>{ const c=card.c[card.c.length-1]; const res=c[4]||c[3]; G.sanity-=5; runRes("ตัวแข็ง คิดไม่ทัน\n\n"+res[0],res[1]); }});
 }
 const SKW={sneak:"🤫 ใช้ความเงียบ",talk:"🗣️ ใช้คำพูด",force:"💪 ใช้แรง",run:"🏃 ใช้ความไว",read:"👀 ใช้การสังเกต",tech:"🔧 ใช้ความรู้ช่าง",med:"🩺 ใช้ความรู้พยาบาล",drive:"🚗 ใช้ฝีมือขับ",gun:"🔫 ใช้ปืน",scav:"🔍 ใช้การหาของ",blade:"🔪 ใช้มีด"};
+
+function ctxOpts(card,have){
+ const danger=card.c.some(c=>[c[3],c[4]].some(r=>r&&r[1]&&(r[1].fight||r[1].capture||(r[1].hp||0)<0)));
+ if(!danger) return [];
+ const out=[], R=(text,fx)=>()=>runRes(text,fx), has=x=>G.inv.includes(x), ph=phase().k;
+ const mk=(l,p,sub,ok,bad)=>out.push({l,p,sub,k:"card",go:()=>{ const r=chance(p)?ok:bad; typeof r==="function"?r():runRes(r[0],r[1]); }});
+ if(has("ประทัดยักษ์")) mk("🧨 จุดประทัดโยนไปอีกทาง ล่อให้หันไป",.78,"🎒 ใช้ของในกระเป๋า",["จุดประทัดแล้วโยนไปอีกฝั่ง เสียงระเบิดดังเป็นชุด ทุกสายตาหันไปทางนั้น {ME}ถอยออกมาเงียบๆ",{use:"ประทัดยักษ์",nz:2}],["ประทัดด้าน มีแต่ควันฉุนลอยขึ้น แล้วทุกสายตาก็หันมาทางนี้",{use:"ประทัดยักษ์",fight:"robber"}]);
+ if(G.masks.length){ const m=G.masks[0]; const p=pOf(.6,"talk"); mk(`🎭 สวม${m} เดินผ่านไปเหมือนพวกเดียวกัน`,p,"🎒 ปลอมตัว",[`สวม${m}แล้วเดินตรงเข้าไปเหมือนเป็นพวกเดียวกัน ไม่มีใครกล้าถาม มีคนหลีกทางให้ด้วยซ้ำ`,{sa:-3}],["หน้ากากเบี้ยวไปข้างหนึ่ง มีคนหัวเราะ “ของปลอมนี่หว่า”",{fight:"mask"}]); }
+ if(G.money>=300){ const p=pOf(.55,"talk"); mk("💵 ยื่นเงินให้ 300 แลกกับการปล่อยผ่าน",p,"💵 ใช้เงิน",["ยื่นเงินสามร้อยให้ มันส่องธนบัตรกับไฟ แล้วเบี่ยงตัวหลีกทาง",{$:-300}],["มันรับเงินไป แล้วยิ้ม “ขอบใจ ทีนี้ขอที่เหลือด้วย”",{$:-300,rob:1,hp:-6}]); }
+ if(WEAPONS[G.weapon].gun&&G.ammo>0) mk("🔫 ยิงขึ้นฟ้าข่มขวัญ",.6,"เสียงดังมาก",["เสียงปืนนัดเดียว ทุกคนแตกฮือ ไม่มีใครอยากเป็นคนต่อไป",{am:-1,nz:4}],["มันไม่สะดุ้งเลยสักนิด แล้วยิงสวนกลับมา",{am:-1,nz:4,hp:-12,fight:"robber"}]);
+ const dog=G.comps.find(c=>c.dog), fr=G.comps.find(c=>!c.dog);
+ if(dog) mk("🐕 ปล่อยหมาเข้าไปก่อน",.62,"👥 ใช้คนร่วมทาง",["หมาแยกเขี้ยวพุ่งเข้าไป เสียงเห่าปนเสียงร้อง {ME}ฉวยจังหวะผ่านไปได้ ไม่นานมันก็วิ่งตามมาทัน",{}],()=>{ G.comps=G.comps.filter(c=>c!==dog); runRes("หมาโดนเตะกระเด็น ร้องเอ๋งเสียงเดียวแล้วหายไปในความมืด ไม่กลับมาอีก",{sa:-10}); });
+ if(fr) mk(`🧍 ให้${fr.name}ช่วยดึงความสนใจ`,pOf(.55,"talk"),"👥 ใช้คนร่วมทาง",[`${fr.name}ตะโกนเรียกอีกทาง ทุกอย่างหันไปตามเสียง สองคนวิ่งมาเจอกันอีกทีที่หัวมุมถัดไป หอบจนพูดไม่ออก`,{help:0}],()=>{ fr.hp-=ri(30,50); if(fr.hp<=0){ G.comps=G.comps.filter(c=>c!==fr); G.flags.lostComp=true; return runRes(`${fr.name}โดนเข้าไปเต็มๆ ล้มลงตรงนั้น ไม่ลุกขึ้นอีก`,{sa:-14}); } runRes(`${fr.name}โดนเข้าไปหนึ่งที แต่ยังลากตัวหนีมาได้ เลือดเต็มแขน`,{sa:-5}); });
+ if(has("ไฟฉาย")&&ph!=="early") mk("🔦 ส่องไฟฉายเข้าตา แล้ววิ่งผ่าน",pOf(.5,"run"),"🎒 ใช้ของในกระเป๋า",["ส่องไฟฉายเข้าตาเต็มๆ มันยกแขนบัง {ME}วิ่งผ่านไปก่อนที่มันจะมองเห็นอะไร",{st:-10}],["แสงไฟบอกตำแหน่ง{ME}ให้ทุกคนรู้",{nz:3,fight:"robber"}]);
+ if(has("ระเบิดขวด")&&!G.rule.noBomb) mk("🍾 ขว้างระเบิดขวดใส่ แล้วถอย",.7,"🎒 ไฟลุกท่วม",["ขวดแตก ไฟลุกพรึ่บเป็นกำแพงขวางระหว่างกัน {ME}ถอยออกมาท่ามกลางเสียงกรีดร้อง",{use:"ระเบิดขวด",ka:-2,sa:-6,nz:4}],["ขวดตกแตกไม่ถึง ไฟลามมาทางนี้แทน",{use:"ระเบิดขวด",hp:-14,nz:4}]);
+ const tail=[]; tail.push({l:"🤫 ถอยกลับไปเงียบๆ ไม่ยุ่ง",p:pOf(.55,"sneak"),sub:"ไม่เสี่ยงมาก แต่เสียเวลา",k:"card",go:()=>chance(pOf(.55,"sneak"))?runRes("ถอยออกมาทีละก้าวโดยไม่หันหลัง จนพ้นสายตา แล้วอ้อมไปอีกทาง",{min:12}):runRes("เหยียบอะไรบางอย่างดังกร๊อบ ทุกอย่างหยุดนิ่ง แล้วหันมา",{hp:-8,nz:2,min:5})});
+ const room=Math.max(0,6-have);
+ return out.sort(()=>Math.random()-.5).slice(0,Math.min(3,room)).concat(room>out.length&&have<5?tail:[]).slice(0,room);
+}
 function resolveChoice(card,c){
  const ok=c[2]==null||chance(pOf(c[2],c[1])); const res=ok?c[3]:(c[4]||c[3]);
  runRes(res[0],res[1]);
@@ -1885,7 +2035,7 @@ function renderTitle(){
  ${META.runs?`<div class="small">ปีที่ ${META.year} • ตอนจบ ${n}/100 • ผ่านมา ${META.runs} คืน</div>`:""}${META.scars.length?`<div class="small" style="color:var(--amber)">สิ่งที่ติดตัวมาจากปีก่อน: ${META.scars.join(", ")}</div>`:""}
  ${can?`<button class="btn primary" onclick="resumeRun()">⏯️ เล่นต่อ</button>`:""}<button class="btn ${can?"":"primary"}" onclick="renderCreate()">🩸 เริ่มคืนใหม่</button>
  ${n?`<button class="btn ghost" onclick="renderBook()">📖 สมุดสะสมตอนจบ (${n}/100)</button>`:""}
- <div class="howto"><b>เล่นยังไง</b><br>1. เลือกทางกลับบ้านทีละจุด 🧭<br>2. เจอเหตุการณ์ระหว่างทาง ตัดสินใจว่าจะทำอะไร<br>3. ไปถึง 🏠 ก่อนฟ้าสาง โดยหัวใจ ❤️ ไม่หมด</div>
+ <div class="howto"><b>เล่นยังไง</b><br>1. เดินสำรวจแต่ละที่ได้ตามใจ ค้นของ หารถ หาที่ซ่อน 🚶<br>2. เลือกเองว่าจะออกทางไหน ถนนใหญ่ ซอย ท่อ ดาดฟ้า 🧭<br>3. ไปถึง 🏠 ก่อนฟ้าสาง โดยหัวใจ ❤️ ไม่หมด</div>
  <button class="btn ghost sm" onclick="toggleSnd()">${SND.on?"🔊 เสียงและการสั่น: เปิด (ใส่หูฟังจะหลอนกว่า)":"🔇 เสียงและการสั่น: ปิด"}</button>
  <div class="small" style="margin-top:20px;color:#5a4a4d">เรื่องแต่งทั้งหมด • มีความรุนแรง • เซฟอัตโนมัติในเครื่องนี้</div></div>`;
 }
@@ -1925,7 +2075,7 @@ window.runBot=function(n,smart){ window.__BOT=true; const out={ends:{},err:[],st
     let c=null;
     if(smart){ const sc=UI.scene;
      if(sc==="menu"){ const f=k=>cs.find(x=>x.k===k); const t=cs.filter(x=>x.k==="travel"); const sco=x=>-x.meta.fwd*200+x.meta.min+(x.meta.gang?70:0)+(x.meta.fire?50:0)+(x.meta.e.blocked>0?40:0)+(x.meta.drop?250:0)+(x.meta.runOut?60:0)+Math.random()*10;
-      c=(((G.bleed>0||G.hp<G.hpMax*.5)&&(G.inv.includes("ชุดปฐมพยาบาล")||G.bleed>0))?f("heal"):null)||(((VEHS[G.veh].sp<20&&kmLeft()>(720-G.min)/60*4)||(VEHS[G.veh].fuel&&G.fuel<12))?f("search"):null)||t.sort((a,b)=>sco(a)-sco(b))[0]; }
+      c=(((G.bleed>0||G.hp<G.hpMax*.5)&&(G.inv.includes("ชุดปฐมพยาบาล")||G.bleed>0))?f("heal"):null)||(((VEHS[G.veh].sp<20&&kmLeft()>(720-G.min)/60*4)||(VEHS[G.veh].fuel&&G.fuel<12))?(f("hotwire")||f("siphon")||f("search")):null)||(t.filter(x=>x.meta.fwd>0&&!x.dis).length?t.filter(x=>!x.dis).sort((a,b)=>sco(a)-sco(b))[0]:null)||(()=>{ const sp=cs.filter(x=>x.k==="spot"); const g=sp.filter(x=>x.meta.fwd); const vis=G._botSp=G._botSp||{}; const cand=(g.length?g:sp).filter(x=>(vis[G.at+":"+x.meta.id]||0)<3); const pk=cand.length?pick(cand):null; if(pk){vis[G.at+":"+pk.meta.id]=(vis[G.at+":"+pk.meta.id]||0)+1; return pk;} return t.filter(x=>!x.dis).sort((a,b)=>sco(a)-sco(b))[0]||f("hotwire")||cs[0]; })(); }
      else if(sc==="more"||sc==="mapview"||sc==="help"||sc==="cmore"){ c=cs.find(x=>x.k==="back")||cs[0]; if(sc==="more"&&G.stamina<22&&!G._bh){G._bh=1;c=cs.find(x=>x.k==="hide")||c;} }
      else if(sc==="combat"){ const f=k=>cs.find(x=>x.k===k), a=f("attack"), fl=f("flee"); c=(G.hp<G.hpMax*.3&&fl&&fl.p>.3)?fl:(a&&a.p>=.35)?a:f("close")||a||f("defend"); }
      else { const safe=cs.filter(x=>x.k!=="back"&&x.k!=="end"&&x.k!=="betray"&&x.k!=="rush"); const pool=safe.length?safe:cs; c=pool.slice().sort((a,b)=>((b.p==null?.6:b.p)+Math.random()*.25+(b.k==="fight"?-.3:0)+(b.k==="careful"?.4:0))-((a.p==null?.6:a.p)+Math.random()*.25+(a.k==="fight"?-.3:0)+(a.k==="careful"?.4:0)))[0]; } }

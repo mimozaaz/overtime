@@ -173,7 +173,7 @@ input,button{font-family:inherit}
 .blur{filter:blur(2.2px);transition:filter 2s}.ghostw{color:#ff2b3d;font-weight:800;letter-spacing:1px}
 .btn.phantom{border-style:dashed;opacity:.8;animation:pulse 2.4s infinite}
 .callcard{text-align:center;border-color:#2c6a3a!important}.callcard .scene-ic{animation:shake .5s infinite}
-</style></head><body>
+</style><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="theme-color" content="#120a0a"></head><body>
 <div class="scrim-red" id="scrim"></div><div id="notif"></div><div id="app"></div><div id="side" style="display:none;padding:14px 14px 90px"></div>
 <div class="navbar" id="nav" style="display:none">
 <button data-tab="game" class="on"><span class="ic">🩸</span>คืนนี้</button>
@@ -3136,4 +3136,4 @@ window.runBot=function(n,smart){ window.__BOT=true; const out={ends:{},err:[],st
  window.__BOT=false; return out; };
 renderTitle();
 
-</script></body></html>
+</script><script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));</script></body></html>

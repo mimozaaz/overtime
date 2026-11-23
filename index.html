@@ -5,6 +5,16 @@
   --bg:#0a0607; --bg2:#120a0c; --ink:#e8dcdc; --dim:#9a8888; --red:#ff2b3d; --red2:#b0121f;
   --neon:#ff3b5c; --amber:#ffb039; --green:#4fd77a; --blue:#4fb0ff; --panel:#160d10; --line:#2a1a1e;
 }
+body.dawnth{--red:#3bd1ff;--red2:#126a8a;--neon:#3bd1ff}
+#otpop{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:50;display:flex;flex-direction:column;gap:6px;width:min(92vw,440px);pointer-events:none}
+#otpop div{background:#1d1114;border:1px solid var(--amber);color:var(--amber);border-radius:12px;padding:10px 14px;font-weight:700;box-shadow:0 6px 24px rgba(0,0,0,.6)}
+#otpop small{display:block;color:var(--ink);font-weight:400}
+.cal{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px}
+.cal div{border:1px solid var(--line);border-radius:10px;padding:6px 0;text-align:center;font-size:13px;background:var(--bg2)}
+.cal div.on{border-color:var(--amber);color:var(--amber)}
+.ach{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.ach.lock{opacity:.5}.ach .ai{font-size:22px;width:30px;text-align:center}
+.prog{height:6px;background:#000;border-radius:4px;margin-top:4px;overflow:hidden}.prog i{display:block;height:100%;background:var(--amber)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
   font-family:"Sukhumvit Set","Thonburi","Noto Sans Thai","Leelawadee UI",-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,sans-serif;-webkit-text-size-adjust:100%;text-size-adjust:100%;line-height:1.55;
@@ -1079,7 +1089,7 @@ K("ch_wire","*","ที่นี่แคบพอดี ทางเข้า�
 const VER=2, SKEY="overtime.save.v2", MKEY="overtime.meta.v1";
 const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
 const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
-const META_DEF=()=>({v:VER,runs:0,endings:{},kills:0,saved:0,betrayed:0,worldGhosts:[],scars:[],year:13,recent:[],best:null,arrived:0,pts:0,perks:{},stash:[],legacy:null});
+const META_DEF=()=>({v:VER,runs:0,endings:{},kills:0,saved:0,betrayed:0,worldGhosts:[],scars:[],year:13,recent:[],best:null,arrived:0,pts:0,perks:{},stash:[],legacy:null,dn:null,cal:null,dq:null,wkDone:{},ach:{},st:{},title:null,theme:null,themeOn:0,sureUp:0,instNo:0});
 function migrateMeta(m){
  if(!m) return META_DEF();
  const d=META_DEF(); for(const k in d) if(m[k]===undefined) m[k]=d[k];
@@ -1103,7 +1113,173 @@ function tk(s){
  const w=G.w;
  return s.replace(/\{W\}/g,w.n).replace(/\{ME\}/g,me()).replace(/\{i\}/g,w.i).replace(/\{you\}/g,w.you).replace(/\{me\}/g,w.self).replace(/\{c\}/g,G.secretCode);
 }
-function saveRun(){ if(G&&!G.over) save(SKEY,G); }
+
+/* ================= RETENTION: คืนประจำวัน · ภารกิจรายวัน · ปฏิทิน 30 วัน · กฎประจำสัปดาห์ · achievement ================= */
+var dnRS=null;
+const SKEY_D="overtime.daily.v1";
+const GC_CODE=""; // ใส่ชื่อบัญชี GoatCounter เพื่อเปิดการนับสถิติ เว้นว่าง = ปิด
+function track(path){try{if(GC_CODE&&window.goatcounter&&goatcounter.count)goatcounter.count({path,event:true})}catch(e){}}
+if(GC_CODE){const sc=document.createElement("script");sc.async=1;sc.src="https://gc.zgo.at/count.js";sc.dataset.goatcounter="https://"+GC_CODE+".goatcounter.com/count";document.head.appendChild(sc)}
+const _rnd=Math.random;
+function _mb(x){let a=x|0;a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return [a,((t^(t>>>14))>>>0)/4294967296]}
+Math.random=function(){if(dnRS!=null){const [a,v]=_mb(dnRS);dnRS=a;return v}if(G&&G.dn&&G.rs!=null&&!G.over){const [a,v]=_mb(G.rs);G.rs=a;return v}return _rnd()};
+function otToday(){const d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()}
+function dnSeed(d){let h=2166136261;for(const c of "ot-night-"+d)h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0}
+function carry(t,x){G._carry=(G._carry?G._carry+"\n\n":"")+`<b>${t}</b> ${x}`}
+function nbF(){return 1-(G&&G.nb||0)*.07}
+function otPop(t,x){let el=document.getElementById("otpop");if(!el){el=document.createElement("div");el.id="otpop";document.body.appendChild(el)}const d=document.createElement("div");d.innerHTML=t+"<small>"+x+"</small>";el.appendChild(d);setTimeout(()=>d.remove(),3500)}
+
+/* --- คืนประจำวัน --- */
+function dnInfo(){META.dn=META.dn||{date:null,played:0,res:null,hist:[]};return META.dn}
+function startDaily(g){const D=dnInfo();if(D.date===otToday()&&D.played)return;if(load(SKEY_D,null))return resumeRun(SKEY_D);
+ dnRS=dnSeed(otToday()+g);newRun(g,false,{daily:1});track("/daily/start")}
+function dailyBtnH(can){const D=dnInfo(),ds=load(SKEY_D,null);
+ if(ds&&ds.v===VER&&!ds.over)return `<button class="btn primary" onclick="resumeRun('${SKEY_D}')">🌙 เล่นคืนประจำวันต่อ</button>`;
+ if(D.date===otToday()&&D.played)return `<button class="btn" disabled>🌙 คืนประจำวัน: เล่นแล้ววันนี้ · ${D.res.txt}<div class="cost">รอบใหม่เปิดหลังเที่ยงคืน</div></button>`;
+ return `<div class="grid2"><button class="btn ${can?"":"primary"}" onclick="startDaily('m')">🌙 คืนประจำวัน ♂</button><button class="btn ${can?"":"primary"}" onclick="startDaily('f')">🌙 คืนประจำวัน ♀</button></div><div class="small" style="margin:-4px 0 8px">ทุกคนที่เลือกเพศเดียวกันเจอคืนเดียวกัน · เล่นจริงได้วันละครั้ง · ไม่ใช้สิ่งที่ติดตัวข้ามปี · ได้แต้มโบนัส</div>`}
+
+/* --- ภารกิจรายวัน (นับจากผลของแต่ละคืน) --- */
+const OTQ=[
+ {id:"arrive",t:"กลับถึงบ้านให้ได้ 1 คืน",n:1,f:g=>g.ending.arrived?1:0},
+ {id:"walk",t:"ถึงบ้านด้วยการเดินเท้า",n:1,f:g=>g.ending.arrived&&g.veh==="เดินเท้า"?1:0},
+ {id:"help",t:"ช่วยคนรวม 3 คน",n:3,f:g=>g.helped||0},
+ {id:"nokill",t:"ถึงบ้านโดยไม่ฆ่าใคร",n:1,f:g=>g.ending.arrived&&!g.kills?1:0},
+ {id:"kill",t:"ล้มศัตรูรวม 4 คน",n:4,f:g=>g.kills||0},
+ {id:"newend",t:"ปลดล็อกฉากจบใหม่ 1 อัน",n:1,f:g=>g.ending.isNew?1:0},
+ {id:"km",t:"เดินทางรวม 80 กม.",n:80,f:g=>g.map&&g.mode==="run"?Math.max(0,Math.round(g.map.km-kmLeft())):0},
+ {id:"nights",t:"เล่นให้จบ 2 คืน",n:2,f:()=>1},
+ {id:"alive",t:"รอดถึงเช้า 2 คืน",n:2,f:g=>g.ending.alive?1:0},
+ {id:"hunt",t:"เล่นโหมดออกล่า 1 คืน",n:1,f:g=>g.mode==="hunt"?1:0,ok:()=>huntOpen()},
+ {id:"home",t:"เล่นโหมดเฝ้าบ้าน 1 คืน",n:1,f:g=>g.mode==="home"?1:0,ok:()=>homeOpen()}];
+const DQ_EACH=8,DQ_ALL=12;
+function dqInfo(){const d=otToday();if(!META.dq||META.dq.date!==d){const pool=OTQ.filter(q=>!q.ok||q.ok());let h=dnSeed("q"+d);const ids=[];
+  while(ids.length<3&&ids.length<pool.length){h=(Math.imul(h,1103515245)+12345)>>>0;const q=pool[h%pool.length].id;if(!ids.includes(q))ids.push(q)}
+  META.dq={date:d,ids,prog:{},done:[],bonus:0}}return META.dq}
+
+/* --- ปฏิทิน 30 วัน --- */
+const CAL_GIFT={7:{t:"🩸 +40 แต้ม + ฉายา “คนที่กลับบ้านทุกปี”",f:()=>{META.pts+=40;META.title="คนที่กลับบ้านทุกปี"}},
+ 14:{t:"🎟️ ใบแลกสิ่งที่ติดตัวฟรี 1 ใบ",f:()=>{META.sureUp=(META.sureUp||0)+1}},
+ 21:{t:"🩸 +80 แต้ม",f:()=>{META.pts+=80}},
+ 30:{t:"🌅 ธีมฟ้ารุ่งสาง + ฉายา “รอดมาสามสิบคืน” + 🩸 150 แต้ม",f:()=>{META.theme="dawn";META.themeOn=1;META.title="รอดมาสามสิบคืน";META.pts+=150}}};
+function calN(){return META.cal?META.cal.days.length:0}
+function calMark(ex){META.cal=META.cal||{days:[]};const d=otToday();if(META.cal.days.includes(d))return;META.cal.days.push(d);const n=META.cal.days.length;
+ const p=n>30?6:5+Math.ceil(n/3);META.pts+=p;let t=`📅 ปฏิทินวันที่ ${n}: +${p} แต้ม`;const g=CAL_GIFT[n];if(g){g.f();t+=" · "+g.t}ex.push(t);track("/cal/"+n);applyTheme()}
+function applyTheme(){try{document.body.classList.toggle("dawnth",!!(META.theme==="dawn"&&META.themeOn))}catch(e){}}
+function toggleTheme(){META.themeOn=META.themeOn?0:1;saveMeta();applyTheme();renderDaily()}
+
+/* --- กฎประจำสัปดาห์ (หมุนจาก YEAR_RULES ที่มีอยู่) --- */
+const WK_REWARD=40;
+function wkIndex(){const t=new Date();const days=Math.floor(Date.UTC(t.getFullYear(),t.getMonth(),t.getDate())/864e5);return Math.floor((days+3)/7)}
+function wkRule(){return YEAR_RULES[wkIndex()%YEAR_RULES.length]}
+function wkDoneNow(){return !!(META.wkDone&&META.wkDone[wkIndex()])}
+
+/* --- Achievement --- */
+const AR=g=>!!(g&&g.ending&&g.ending.arrived), ALV=g=>!!(g&&g.ending&&g.ending.alive);
+const allEnd=()=>mainN()+modeN("hunt")+modeN("home");
+const OTACH=[
+ ["first","🌃","คืนแรก","จบคืนแรก ไม่ว่าจะรอดหรือไม่",g=>META.runs>=1],
+ ["arrive1","🏠","ถึงบ้าน","กลับถึงบ้านครั้งแรก",g=>AR(g)||META.arrived>=1],
+ ["arrive5","🏘️","ทางกลับบ้านที่คุ้นเคย","กลับถึงบ้าน 5 ครั้ง",g=>META.arrived>=5,()=>[META.arrived,5]],
+ ["arrive20","🗺️","จำได้ทุกซอย","กลับถึงบ้าน 20 ครั้ง",g=>META.arrived>=20,()=>[META.arrived,20]],
+ ["walker","🚶","สองขาพาถึงบ้าน","ถึงบ้านด้วยการเดินเท้า",g=>AR(g)&&g.veh==="เดินเท้า"],
+ ["pacifist","🕊️","มือสะอาด","ถึงบ้านโดยไม่ฆ่าใครเลย",g=>AR(g)&&!g.kills],
+ ["butcher","🔪","คืนนองเลือด","ล้มศัตรู 5 คนในคืนเดียว",g=>g&&g.kills>=5],
+ ["saint","🤝","ใจบุญกลางนรก","ช่วยคน 3 คนในคืนเดียว",g=>g&&g.helped>=3],
+ ["saved20","🫶","คนที่ใครก็จำได้","ช่วยคนรวม 20 คน",g=>META.saved>=20,()=>[META.saved,20]],
+ ["betrayed","🗡️","แผลจากคนใกล้ตัว","ถูกหักหลังแล้วยังรอดถึงเช้า",g=>g&&g.betrayedCount>0&&ALV(g)],
+ ["love","💘","คืนที่ได้เจอใครบางคน","เจอคนรักระหว่างทาง",g=>!!(g&&(g.partner||g.flags.partnerDied))],
+ ["sacrifice","🥀","คนที่ล้มแทน","มีคนยอมตายแทนคุณ",g=>!!(g&&g.flags.partnerDied)],
+ ["kidney","🩺","เหลือไตข้างเดียว","รอดออกมาจากคลินิกค้าอวัยวะ",g=>!!(g&&g.flags.lostKidney)&&ALV(g)],
+ ["lastbreath","🫀","ลมหายใจสุดท้าย","รอดจากลมหายใจสุดท้ายจนถึงเช้า",g=>!!(g&&g.flags.lastStand)&&ALV(g)],
+ ["nomercy","☠️","ไร้ปรานี","ถึงบ้านในโหมดไร้ปรานี",g=>AR(g)&&g.noMercy],
+ ["legacy","🔁","คนเดิม ปีถัดไป","เล่นด้วยคนเดิมจากปีที่แล้ว",g=>!!(g&&g.legacy)],
+ ["legacyhome","🎂","อีกปีที่รอด","ถึงบ้านด้วยคนเดิมจากปีที่แล้ว",g=>AR(g)&&!!g.legacy],
+ ["lowhp","🩸","เส้นยาแดง","ถึงบ้านโดยเหลือเลือดไม่ถึง 15",g=>AR(g)&&g.hp<15],
+ ["insane","🌀","สติแตกแต่ยังเดิน","ถึงบ้านทั้งที่สติต่ำกว่า 20",g=>AR(g)&&g.sanity<20],
+ ["rich","💰","กระเป๋าหนัก","จบคืนโดยมีเงินติดตัว 5,000 บาทขึ้นไป",g=>g&&g.money>=5000],
+ ["lastmin","⏰","ทันไซเรนพอดี","ถึงบ้านหลัง 06:30",g=>AR(g)&&g.min>=690],
+ ["early","🌙","ถึงก่อนเที่ยงคืน","ถึงบ้านก่อน 00:00",g=>AR(g)&&g.min<300],
+ ["huntmode","🎯","อีกฝั่งของคืน","เล่นโหมดออกล่า",g=>g&&g.mode==="hunt"],
+ ["huntmercy","🤲","นักล่าใจอ่อน","ไว้ชีวิตเป้าหมาย 3 คนในคืนเดียว",g=>g&&(g.flags.spared||0)>=3],
+ ["homemode","🚪","คนที่รอ","เล่นโหมดเฝ้าบ้าน",g=>g&&g.mode==="home"],
+ ["homehold","🛡️","ไม่มีใครผ่านประตูนี้","เฝ้าบ้านจนเช้าโดยไม่มีใครพังเข้ามา",g=>g&&g.mode==="home"&&!g.flags.breached&&ALV(g)],
+ ["end10","📖","สมุดเริ่มหนา","ปลดล็อกตอนจบหลัก 10 อัน",g=>mainN()>=10,()=>[mainN(),10]],
+ ["end25","📚","เห็นมาหลายแบบ","ปลดล็อกตอนจบหลัก 25 อัน",g=>mainN()>=25,()=>[mainN(),25]],
+ ["end50","🗂️","ครึ่งทางของทุกชะตา","ปลดล็อกตอนจบหลัก 50 อัน",g=>mainN()>=50,()=>[mainN(),50]],
+ ["end100","🏆","ครบร้อยคืน","ปลดล็อกตอนจบหลักครบ 100",g=>mainN()>=100,()=>[mainN(),100]],
+ ["hunt10","🩸","ตำนานนักล่า","ปลดล็อกตอนจบโหมดออกล่า 10 อัน",g=>modeN("hunt")>=10,()=>[modeN("hunt"),10]],
+ ["home10","🏚️","ผู้เฝ้าประตู","ปลดล็อกตอนจบโหมดเฝ้าบ้าน 10 อัน",g=>modeN("home")>=10,()=>[modeN("home"),10]],
+ ["all160","👑","รู้ทุกชะตาของคืนนี้","ปลดล็อกตอนจบครบ 160",g=>allEnd()>=160,()=>[allEnd(),160]],
+ ["runs10","🌒","สิบปีที่ผ่านมา","เล่นครบ 10 คืน",g=>META.runs>=10,()=>[META.runs,10]],
+ ["runs50","🌑","ห้าสิบปีแห่งคืนไร้กฎ","เล่นครบ 50 คืน",g=>META.runs>=50,()=>[META.runs,50]],
+ ["perkmax","🧬","สัญชาตญาณเต็มเปี่ยม","อัปสิ่งที่ติดตัวข้ามปีอย่างใดอย่างหนึ่งจนเต็ม",g=>Object.entries(PERKS).some(([k,p])=>(META.perks[k]||0)>=p.c.length)],
+ ["dn1","🌙","คืนเดียวกันทั้งเมือง","เล่นคืนประจำวันครั้งแรก",g=>(META.st.dnCount||0)>=1],
+ ["dn7","🗓️","ขาประจำคืนไร้กฎ","เล่นคืนประจำวัน 7 ครั้ง",g=>(META.st.dnCount||0)>=7,()=>[META.st.dnCount||0,7]],
+ ["dnhome","🌕","ถึงบ้านในคืนเดียวกับทุกคน","ถึงบ้านในคืนประจำวัน",g=>AR(g)&&!!g.dn],
+ ["cal7","📅","หนึ่งสัปดาห์ที่ไม่หนีไปไหน","เข้ามาเล่นครบ 7 วัน",g=>calN()>=7,()=>[calN(),7]],
+ ["cal30","🌅","รอดมาสามสิบคืน","เข้ามาเล่นครบ 30 วัน",g=>calN()>=30,()=>[calN(),30]],
+ ["dqall","✅","งานครบทุกข้อ","ทำภารกิจรายวันครบ 3 ข้อในวันเดียว",g=>(META.st.dqAll||0)>=1],
+ ["wk1","🔮","ผ่านกฎประจำสัปดาห์","ถึงบ้านภายใต้กฎประจำสัปดาห์",g=>Object.keys(META.st.wk||{}).length>=1],
+ ["wk4","♾️","ผ่านมาทุกกฎ","ถึงบ้านภายใต้กฎประจำสัปดาห์ 4 แบบ",g=>Object.keys(META.st.wk||{}).length>=4,()=>[Object.keys(META.st.wk||{}).length,4]]];
+const ACH_PTS=5;
+function checkOtAch(g,ex){let n=0;for(const [id,i,t,d,f] of OTACH){if(META.ach[id])continue;let ok=false;try{ok=f(g)}catch(e){}if(ok){META.ach[id]=Date.now();META.pts+=ACH_PTS;n++;
+ if(ex)ex.push(`${i} Achievement “${t}” +${ACH_PTS} แต้ม`);else otPop(i+" "+t,d+" · +"+ACH_PTS+" แต้ม")}}if(n)saveMeta()}
+
+/* --- รวมทุกอย่างตอนจบคืน --- */
+function retEnd(){const g=G,ex=g.ending.extra;META.st=META.st||{};
+ if(g.wkr!=null)ex.push("🔮 กฎประจำสัปดาห์: แต้มรอด ×2");
+ if(g.dn){const D=dnInfo();const km=g.map&&g.mode==="run"?Math.max(0,Math.round(g.map.km-kmLeft())):0;const b=10+Math.round(km/5)+(g.ending.arrived?25:0);
+  META.pts+=b;D.date=g.dn;D.played=1;D.res={km,arrived:g.ending.arrived,alive:g.ending.alive,txt:g.ending.arrived?"ถึงบ้าน":g.ending.alive?`รอด · ไป ${km} กม.`:`ไป ${km} กม.`};
+  D.hist=(D.hist||[]).concat([{d:g.dn,km,a:g.ending.arrived}]).slice(-30);META.st.dnCount=(META.st.dnCount||0)+1;ex.push(`🌙 คืนประจำวัน +${b} แต้ม`);track("/daily/end")}
+ if(g.wkr!=null&&g.ending.arrived&&g.wkr===wkIndex()&&!wkDoneNow()){META.wkDone[wkIndex()]=1;META.st.wk=META.st.wk||{};META.st.wk[YEAR_RULES.indexOf(wkRule())]=1;META.pts+=WK_REWARD;ex.push(`🔮 ถึงบ้านภายใต้กฎประจำสัปดาห์ +${WK_REWARD} แต้ม`)}
+ const Q=dqInfo();for(const id of Q.ids){if(Q.done.includes(id))continue;const q=OTQ.find(x=>x.id===id);Q.prog[id]=(Q.prog[id]||0)+q.f(g);
+  if(Q.prog[id]>=q.n){Q.done.push(id);META.pts+=DQ_EACH;ex.push(`✅ ภารกิจ “${q.t}” +${DQ_EACH} แต้ม`)}}
+ if(Q.done.length===Q.ids.length&&!Q.bonus){Q.bonus=1;META.pts+=DQ_ALL;META.st.dqAll=(META.st.dqAll||0)+1;ex.push(`🎉 ภารกิจครบวันนี้ +${DQ_ALL} แต้ม`)}
+ calMark(ex);checkOtAch(g,ex)}
+
+/* --- เป้าหมายถัดไปบนหน้าแรก --- */
+function nextGoals(){const g=[];const D=dnInfo();
+ if(!(D.date===otToday()&&D.played))g.push(["🌙","คืนประจำวันของวันนี้ยังไม่ได้เล่น · ได้แต้มโบนัส"]);
+ if(!wkDoneNow())g.push(["🔮",`กฎสัปดาห์นี้ “${wkRule().t}”: ถึงบ้านให้ได้ รับ +${WK_REWARD} แต้ม`]);
+ if(!homeOpen())g.push(["🏠",`อีก ${3-META.runs} คืน ปลดล็อกโหมดเฝ้าบ้าน`]);
+ else if(!huntOpen())g.push(["🩸","ได้ฉากจบหมวด “กลายเป็นนักล่า” สักอัน เพื่อปลดโหมดออกล่า"]);
+ const nx=Object.entries(PERKS).map(([k,p])=>({p,c:p.c[pk(k)]})).filter(x=>x.c!=null).sort((a,b)=>a.c-b.c)[0];
+ if(nx)g.push(["🧬",META.pts>=nx.c?`แต้มพอแลก ${nx.p.n} แล้ว`:`อีก ${nx.c-META.pts} แต้ม แลก ${nx.p.n}`]);
+ let best=null;for(const a of OTACH){if(META.ach[a[0]]||!a[5])continue;try{const [x,y]=a[5]();const r=x/y;if(r<1&&(!best||r>best.r))best={a,r,x,y}}catch(e){}}
+ if(best)g.push([best.a[1],`${best.a[2]}: ${Math.min(best.x,best.y)}/${best.y}`]);
+ return g.slice(0,3)}
+function goalH(){const g=nextGoals();return g.length?`<div class="panel"><b>เป้าหมายถัดไป</b>${g.map(([i,t])=>`<div class="small" style="color:var(--ink);margin-top:6px">${i} ${t}</div>`).join("")}</div>`:""}
+
+/* --- หน้าภารกิจ/ปฏิทิน --- */
+function renderDaily(){setNav(false);setTabUI("game");UI.choices=[];const Q=dqInfo(),n=calN();let cells="";for(let i=1;i<=30;i++)cells+=`<div class="${i<=n?"on":""}">${i<=n?"✅":CAL_GIFT[i]?"🎁":i}</div>`;
+ const w=wkRule();
+ app.innerHTML=`<div class="scr"><h2>📅 วันนี้ในคืนไร้กฎ</h2>
+ <div class="panel"><b>🔮 กฎประจำสัปดาห์: ${w.t}</b><div class="small" style="margin-top:4px">เลือกได้ตอนเริ่มคืนใหม่ · แต้มรอด ×2 · ถึงบ้านครั้งแรกในสัปดาห์ได้ +${WK_REWARD} แต้ม · เปลี่ยนทุกวันจันทร์</div>${wkDoneNow()?`<div class="small" style="color:var(--green)">ผ่านแล้วสัปดาห์นี้ ✅</div>`:""}</div>
+ <div class="panel"><b>ภารกิจวันนี้</b><div class="small">เปลี่ยนทุกเที่ยงคืน · ข้อละ +${DQ_EACH} แต้ม · ครบ 3 ข้อ +${DQ_ALL}</div>
+ ${Q.ids.map(id=>{const q=OTQ.find(x=>x.id===id),v=Math.min(Q.prog[id]||0,q.n),d=Q.done.includes(id);return `<div class="ach"><div class="ai">${d?"✅":"⬜"}</div><div style="flex:1"><b style="font-size:14px">${q.t}</b><div class="prog"><i style="width:${v/q.n*100}%"></i></div><span class="small">${v}/${q.n}</span></div></div>`}).join("")}</div>
+ <div class="panel"><b>📅 ปฏิทิน ${n}/30</b><div class="small">จบอย่างน้อย 1 คืนในวันนั้น = นับ 1 วัน ไม่ต้องติดกัน ขาดได้ไม่รีเซ็ต · ทุกวันได้แต้ม</div><div class="cal">${cells}</div>
+ <div class="small" style="margin-top:8px">${Object.entries(CAL_GIFT).map(([d,g])=>`${n>=d?"✅":"🎁"} วันที่ ${d}: ${g.t}`).join("<br>")}</div>
+ ${META.theme?`<button class="btn sm" onclick="toggleTheme()">${META.themeOn?"ใช้ธีมเดิม":"ใช้ธีมฟ้ารุ่งสาง"}</button>`:""}</div>
+ <button class="btn ghost" onclick="renderTitle()">← กลับ</button></div>`;window.scrollTo(0,0)}
+
+/* --- หน้าความคืบหน้า + achievement --- */
+function renderProg(){setNav(false);setTabUI("game");UI.choices=[];checkOtAch(null,null);const D=dnInfo(),na=Object.keys(META.ach).length;
+ app.innerHTML=`<div class="scr"><h2>🏆 ความคืบหน้า</h2>${META.title?`<div class="small" style="color:var(--amber)">🎖️ ${META.title}</div>`:""}
+ <div class="panel"><div class="kv"><span>ตอนจบหลัก</span><b>${mainN()}/100</b></div><div class="kv"><span>ออกล่า / เฝ้าบ้าน</span><b>${modeN("hunt")}/30 • ${modeN("home")}/30</b></div><div class="kv"><span>ถึงบ้าน</span><b>${META.arrived} ครั้ง จาก ${META.runs} คืน</b></div><div class="kv"><span>ช่วยคน / ถูกหักหลัง</span><b>${META.saved} / ${META.betrayed}</b></div><div class="kv"><span>ปฏิทิน</span><b>${calN()}/30 วัน</b></div><div class="kv"><span>กฎประจำสัปดาห์ที่ผ่าน</span><b>${Object.keys(META.st.wk||{}).length} แบบ</b></div><div class="kv"><span>คืนประจำวัน</span><b>${META.st.dnCount||0} ครั้ง</b></div></div>
+ <div class="panel"><b>Achievement ${na}/${OTACH.length}</b><div class="small">อันละ +${ACH_PTS} แต้ม</div>${OTACH.map(([id,i,t,d,f,p])=>{const got=META.ach[id];let pr="";if(!got&&p){try{const [a,b]=p();pr=`<div class="prog"><i style="width:${Math.min(100,a/b*100)}%"></i></div><span class="small">${Math.min(a,b)}/${b}</span>`}catch(e){}}return `<div class="ach ${got?"":"lock"}"><div class="ai">${got?i:"🔒"}</div><div style="flex:1"><b style="font-size:14px">${t}</b><div class="small">${d}</div>${pr}</div></div>`}).join("")}</div>
+ <button class="btn ghost" onclick="renderTitle()">← กลับ</button></div>`;window.scrollTo(0,0)}
+
+/* --- ชวนติดตั้งเป็นแอป --- */
+let instEv=null;window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();instEv=e});
+function isStandalone(){try{return matchMedia("(display-mode: standalone)").matches||navigator.standalone}catch(e){return false}}
+function installH(){if(META.runs<3||META.instNo||isStandalone())return "";
+ if(instEv)return `<div class="panel"><div class="small" style="color:var(--ink)">📲 เพิ่ม OVERTIME ไว้ที่หน้าจอหลัก เปิดเล่นได้ทันทีเหมือนแอป</div><div class="grid2"><button class="btn primary sm" onclick="doInstall()">ติดตั้ง</button><button class="btn ghost sm" onclick="META.instNo=1;saveMeta();renderTitle()">ไม่เป็นไร</button></div></div>`;
+ if(/iphone|ipad|ipod/i.test(navigator.userAgent))return `<div class="panel"><div class="small" style="color:var(--ink)">📲 เพิ่มไว้ที่หน้าจอหลัก: แตะปุ่ม <b>แชร์</b> ของ Safari แล้วเลือก <b>“เพิ่มไปยังหน้าจอโฮม”</b></div><button class="btn ghost sm" onclick="META.instNo=1;saveMeta();renderTitle()">รับทราบ</button></div>`;
+ return ""}
+async function doInstall(){if(!instEv)return;instEv.prompt();try{const r=await instEv.userChoice;if(r&&r.outcome==="accepted"){META.instNo=1;saveMeta();track("/installed")}}catch(e){}instEv=null;renderTitle()}
+applyTheme();
+
+function saveRun(){ if(G&&!G.over) save(G.dn?SKEY_D:SKEY,G); }
 function saveMeta(){ save(MKEY,META); }
 const place=n=>n.p==="home"?{n:G.dest,ic:"🏠",d:0,loot:["-"]}:PLACES[n.p];
 const node=id=>G.map.nodes[id==null?G.at:id];
@@ -1240,7 +1416,7 @@ function newRun(gender,noMercy,opt){
  META.runs++;
  const age=L?L.age:pick([ri(18,25),ri(26,45),ri(26,45),ri(46,55),ri(56,68)]);
  const job=(L&&JOBS.find(j=>j.id===L.job))||pick(JOBS.filter(j=>age>=(j.min||18)&&age<=(j.max||99)));
- const trait=(L&&TRAITS.find(t=>t.id===L.trait))||pick(TRAITS), rule=pick(YEAR_RULES), route=pick(ROUTES), w=L&&!L.lost?{...L.w}:rollWaiter(age,gender);
+ const trait=(L&&TRAITS.find(t=>t.id===L.trait))||pick(TRAITS), rule=opt.wk&&!opt.daily?wkRule():pick(YEAR_RULES), route=pick(ROUTES), w=L&&!L.lost?{...L.w}:rollWaiter(age,gender);
  const kr=HM?[35,65]:(job.kmr||[60,120]), km=ri(kr[0],kr[1]);
  const startPlace=HM?pick(["village","shophouse","flat","slum"].filter(k=>PLACES[k])):chance(.6)?pick(job.home):pick(PKEYS.filter(k=>!["rich","police"].includes(k)));
  const hpMax=(trait.id==="tough"?125:100)+(age<=25?5:age>=56?-18:age>=46?-8:0)+pk("tough")*8;
@@ -1260,6 +1436,12 @@ function newRun(gender,noMercy,opt){
   hunter:(()=>{ const t=pick(Object.keys(HUNTERS)); return {at:null,known:false,dead:false,stun:0,spawnAt:ri(60,150),type:t,name:pick(HUNTERS[t].names),
    off:!chance(clamp((META.runs<=2?.2:.42)+(rule.e.bounty?.35:0),0,.9))}; })(),
   vis:{},seen:{},known:{},moves:0,over:false,ending:null};
+ if(dnRS!=null){G.dn=otToday();G.rs=dnRS;dnRS=null}
+ if(opt.wk&&!opt.daily&&!HM)G.wkr=wkIndex();
+ G.nb=(G.dn||HM||opt.mode||L)?0:Math.max(0,4-META.runs);
+ if(G.nb)carry("🕯️ ช่วงฝึกหัด","อีก "+G.nb+" คืน: คนร้ายจะพลาดและตีเบาลงเล็กน้อย");
+ if(G.dn)carry("🌙 คืนประจำวัน "+G.dn,"ทุกคนที่เลือกเพศเดียวกันเจอคืนเดียวกัน ไม่ใช้สิ่งที่ติดตัวข้ามปี เล่นจริงได้ครั้งเดียว");
+ if(G.wkr!=null)carry("🔮 กฎประจำสัปดาห์","แต้มรอด ×2 · ถึงบ้านได้รับโบนัสพิเศษ");
  if(VEHS[G.veh].fuel) G.fuel=ri(28,60);
  G.money+=pk("cash")*300; G.hunter.spawnAt+=pk("sixth")*20;
  if(G.rule.jobBounty){ G.hunter.off=false; G.hunter.spawnAt=ri(40,80)+pk("sixth")*20; G.flags.bounty=true; }
@@ -1563,7 +1745,7 @@ const PERKS={
  luck:{n:"🫀 ดวงยังไม่ถึงฆาต",d:"ตอนลมหายใจสุดท้าย มีโอกาสรอดมากขึ้น",c:[40,80,130]},
  photo:{n:"🖼️ รูปในกระเป๋าตังค์",d:"คืนละครั้ง (ระดับ 2 ได้สองครั้ง) หยิบรูปคนที่บ้านขึ้นมาดู สติกลับมา +15",c:[30,70]},
 };
-const pk=k=>(META.perks&&META.perks[k])||0;
+const pk=k=>(dnRS!=null||(G&&G.dn))?0:((META.perks&&META.perks[k])||0);
 function runPoints(){ const e=G.ending;
  if(G.mode==="hunt") return Math.round(G.bounty/150)+G.mercy*4+(e.isNew?15:0)+(e.alive?5:0);
  if(G.mode==="home") return 15+(e.isNew?15:0)+G.helped*3+(G.comps.some(c=>c.tr)?20:0)+(e.alive?5:0);
@@ -1571,13 +1753,13 @@ function runPoints(){ const e=G.ending;
 function renderPerks(back){
  setNav(false); setTabUI("game"); UI.choices=[];
  app.innerHTML=`<div class="scr"><h2>🧬 สิ่งที่ติดตัวข้ามปี</h2><div class="tag" style="margin:6px 0 12px">ทุกคืนที่ผ่านมา ไม่ว่าจะรอดหรือไม่ ทิ้งอะไรบางอย่างไว้ในตัวคุณ ใช้ 🩸 แต้มรอดแลกเป็นสัญชาตญาณที่ติดไปทุกคืนหลังจากนี้</div>
- <div class="panel center"><b style="font-size:20px">🩸 ${META.pts} แต้มรอด</b></div>
- ${Object.entries(PERKS).map(([k,p])=>{ const l=pk(k), mx=p.c.length, cost=p.c[l]; return `<div class="panel" style="padding:12px 14px"><div class="hud-row"><b>${p.n} ${"●".repeat(l)}${"○".repeat(mx-l)}</b>${l>=mx?`<span class="small">เต็มแล้ว</span>`:`<button class="btn sm ${META.pts>=cost?"primary":""}" style="width:auto;margin:0;padding:6px 12px" ${META.pts>=cost?"":"disabled"} onclick="buyPerk('${k}','${back||""}')">🩸 ${cost}</button>`}</div><div class="small">${p.d}</div></div>`; }).join("")}
+ <div class="panel center"><b style="font-size:20px">🩸 ${META.pts} แต้มรอด</b>${META.sureUp?`<div class="small" style="color:var(--amber)">🎟️ มีใบแลกฟรี ${META.sureUp} ใบ · แลกครั้งถัดไปไม่เสียแต้ม</div>`:""}</div>
+ ${Object.entries(PERKS).map(([k,p])=>{ const l=pk(k), mx=p.c.length, cost=p.c[l]; return `<div class="panel" style="padding:12px 14px"><div class="hud-row"><b>${p.n} ${"●".repeat(l)}${"○".repeat(mx-l)}</b>${l>=mx?`<span class="small">เต็มแล้ว</span>`:`<button class="btn sm ${META.pts>=cost?"primary":""}" style="width:auto;margin:0;padding:6px 12px" ${META.pts>=cost||META.sureUp>0?"":"disabled"} onclick="buyPerk('${k}','${back||""}')">🩸 ${cost}</button>`}</div><div class="small">${p.d}</div></div>`; }).join("")}
  ${META.stash.length?`<div class="panel"><b>📦 ของที่คุณซ่อนไว้ตามทาง</b><div class="small" style="margin-top:4px">${META.stash.map(x=>`${x.it} ที่${PLACES[x.p]?PLACES[x.p].n:"ไหนสักแห่ง"} (ปีที่ ${x.y})`).join("<br>")}</div></div>`:""}
  <button class="btn ghost" onclick="${back==="end"?"renderEnding()":"renderTitle()"}">← กลับ</button></div>`;
  window.scrollTo(0,0);
 }
-function buyPerk(k,back){ const p=PERKS[k], l=pk(k); if(l>=p.c.length||META.pts<p.c[l]) return; META.pts-=p.c[l]; META.perks[k]=l+1; saveMeta(); beep(660,.12,"triangle",.05); renderPerks(back); }
+function buyPerk(k,back){ const p=PERKS[k], l=pk(k); if(l>=p.c.length) return; if(META.sureUp>0){META.sureUp--;} else { if(META.pts<p.c[l]) return; META.pts-=p.c[l]; } META.perks[k]=l+1; saveMeta(); beep(660,.12,"triangle",.05); renderPerks(back); }
 function stashMenu(){
  const ch=G.inv.map((x,i)=>({l:`${itemIc(x)} ${x}${x===G.weapon?" (ถืออยู่)":""}`,k:"pick",go:()=>{ G.inv.splice(i,1); if(G.weapon===x&&!G.inv.includes(x)) G.weapon="มือเปล่า";
   META.stash.push({p:node().p,it:x,y:META.year,job:G.job.name}); META.stash=META.stash.slice(-6); saveMeta(); G.flags.stashN=(G.flags.stashN||0)+1; passTime(5);
@@ -2052,10 +2234,10 @@ function enemyTurn(mult,pre){
  if(G.partner&&G.partner.sk==="gun"&&chance(.45)){ e.hp-=22; extra=" เสียงปืนดังจากข้างหลัง เขายิงช่วย"; }
  if(e.hp<=0) return combatWin();
  if(e.range>0&&!e.gun){ e.range--; if(mult<1) return combatScreen(pre+"มันวิ่งเข้ามา"+extra); }
- let hit=e.gun&&e.range>0?.52:.72; if(e.legged)hit-=.25; if(mult<=.4)hit-=.2; hit-=sk("run")*.02;
+ let hit=(e.gun&&e.range>0?.52:.72)-(G.nb||0)*.03; if(e.legged)hit-=.25; if(mult<=.4)hit-=.2; hit-=sk("run")*.02;
  if(!chance(hit)) return combatScreen(pre+pick(FOE_MISS[e.key]||FOE_MISS.worker)+extra);
  const vict=G.comps.filter(c=>c.hp>0); if(vict.length&&chance(.22)){ const c=pick(vict); c.hp-=ri(25,45); if(c.hp<=0){ G.comps=G.comps.filter(x=>x!==c); G.flags.lostComp=true; G.sanity=clamp(G.sanity+sanFx(-10),0,100); addLog(c.name+"ล้มลง ไม่ลุกอีก","bad"); return combatScreen(pre+`มันหันไปทาง${c.name}แทน`,true); } return combatScreen(pre+`${c.name}รับไปแทน`+extra,true); }
- let dmg=e.dmg*(1+(alive()-1)*.32)*rnd(.8,1.2)*mult; if(e.legged)dmg*=.6;
+ let dmg=e.dmg*(1+(alive()-1)*.32)*rnd(.8,1.2)*mult*nbF(); if(e.legged)dmg*=.6;
  if(e.gun&&e.range>0&&chance(.14)){ dmg*=2; pre+="โดนยิงเข้าเต็มๆ "; }
  if(G.trait.id==="reckless")dmg*=1.15; if(G.flags.adrenaline)dmg*=.9;
  dmg=Math.round(dmg); G.hp-=dmg; if(!G.flags.adrenaline)G.sanity=clamp(G.sanity+sanFx(-2),0,100); addLog(`โดน -${dmg}`,"bad"); heart();
@@ -2478,9 +2660,9 @@ function finishEnding(pair){
  META.saved+=G.helped; META.betrayed+=G.betrayedCount; if(G.ending.arrived&&ENDINGS[cat]) META.arrived++;
  if(cat==="hunter") META.worldGhosts.push({type:"hunter"}); if(!alive&&ENDINGS[cat]) META.worldGhosts.push({type:"corpse"}); META.worldGhosts=META.worldGhosts.slice(-4);
  if(alive){ if(G.betrayedCount>0&&!META.scars.includes("ไม่ไว้ใจใคร"))META.scars.push("ไม่ไว้ใจใคร"); if(G.sanity<30&&!META.scars.includes("นอนไม่หลับ"))META.scars.push("นอนไม่หลับ"); }
- G.ending.pts=runPoints(); META.pts=(META.pts||0)+G.ending.pts; saveLegacy();
+ G.ending.pts=runPoints()*(G.wkr!=null?2:1); META.pts=(META.pts||0)+G.ending.pts; G.ending.extra=[]; retEnd(); if(!G.dn) saveLegacy();
  META.recent=Object.keys(G.used).concat(META.recent).slice(0,60); META.year++;
- saveMeta(); try{localStorage.removeItem(SKEY);}catch(e){}
+ saveMeta(); try{localStorage.removeItem(G.dn?SKEY_D:SKEY);}catch(e){}
  renderEnding();
 }
 function renderEnding(){
@@ -2490,7 +2672,7 @@ function renderEnding(){
  <div class="panel"><div class="kv"><span>ตัวตน</span><b>${G.gender==="m"?"ชาย":"หญิง"} ${G.age} ปี • ${G.job.name}</b></div><div class="kv"><span>ปลายทาง</span><b>${G.dest}</b></div><div class="kv"><span>${G.mode==="home"?"คนที่กำลังกลับมา":"คนที่รอ"}</span><b>${G.w.rel}${G.mode==="home"?(G.comps.some(c=>c.tr)?" • มาถึงแล้ว":" • ไม่ได้มาถึง"):""}</b></div>
  <div class="kv"><span>เวลา</span><b>${hhmm(Math.min(720,Math.max(0,G.min)))}</b></div>${G.mode==="home"?`<div class="kv"><span>บ้าน</span><b>${G.flags.breached?"ถูกพังเข้ามา":"ไม่มีใครเข้าได้"}</b></div>`:G.mode==="hunt"?`<div class="kv"><span>ค่าหัว / เป้า</span><b>${G.bounty} บาท • ${G.targets} คน • ไว้ชีวิต ${G.flags.spared||0}</b></div>`:`<div class="kv"><span>ระยะที่เหลือ</span><b>${kmLeft()} จาก ${G.map.km} กม.</b></div>`}<div class="kv"><span>ฆ่า / ช่วย</span><b>${G.kills} / ${G.helped}</b></div><div class="kv"><span>ตอนจบ${G.mode==="hunt"?"โหมดออกล่า":G.mode==="home"?"โหมดเฝ้าบ้าน":""}ที่ปลดล็อก</span><b>${n}/${nT}</b></div></div>
  <div class="narr">07:00 ไซเรนหยุด รถเก็บขยะเริ่มออกวิ่ง คนออกมาฉีดน้ำล้างหน้าบ้าน ร้านกาแฟเปิดตามปกติ ไม่มีใครพูดถึงเมื่อคืน</div>
- <div class="panel center"><b>🩸 แต้มรอด +${e.pts||0}</b> <span class="small">(รวม ${META.pts})</span><div class="small">จากระยะที่ผ่านมา คนที่ช่วย ตอนจบใหม่ และการกลับถึงบ้าน</div></div><button class="btn primary" onclick="renderCreate()">▶ คืนถัดไป (ปีที่ ${META.year})</button><button class="btn" onclick="renderPerks('end')">🧬 ใช้แต้ม: สิ่งที่ติดตัวข้ามปี</button><button class="btn ghost" onclick="renderBook()">📖 สมุดสะสมตอนจบ</button></div>`;
+ ${(e.extra||[]).length?`<div class="panel"><b>โบนัสคืนนี้</b><div class="small" style="margin-top:4px;color:var(--amber)">${e.extra.join("<br>")}</div></div>`:""}<div class="panel center"><b>🩸 แต้มรอด +${e.pts||0}</b> <span class="small">(รวม ${META.pts})</span><div class="small">จากระยะที่ผ่านมา คนที่ช่วย ตอนจบใหม่ และการกลับถึงบ้าน</div></div><button class="btn primary" onclick="renderCreate()">▶ คืนถัดไป (ปีที่ ${META.year})</button><button class="btn" onclick="renderPerks('end')">🧬 ใช้แต้ม: สิ่งที่ติดตัวข้ามปี</button><button class="btn ghost" onclick="renderBook()">📖 สมุดสะสมตอนจบ</button></div>`;
  const s=$("#scrim"); if(s)s.style.boxShadow="none"; window.scrollTo(0,0);
 }
 //========================= TABS =========================
@@ -2534,23 +2716,28 @@ function renderTitle(){
  const n=mainN(), nh=modeN("hunt"), nd=modeN("home"), sv=load(SKEY,null), can=sv&&sv.v===VER&&!sv.over;
  app.innerHTML=`<div class="scr title-wrap"><div class="logo">OVERTIME<small>คืนไร้กฎ</small></div>
  <div class="tag">ปีละหนึ่งคืน สิบสองชั่วโมง ไม่มีกฎหมาย<br>คืนนี้คุณเลิกงานไม่ทันไซเรน และมีคนรออยู่ที่บ้าน<br><b style="color:var(--red)">กลับไปให้ถึงก่อน 07:00</b></div>
- ${META.runs?`<div class="small">ปีที่ ${META.year} • ตอนจบ ${n}/100${nh?` • 🩸 ${nh}/30`:""}${nd?` • 🏠 ${nd}/30`:""} • ผ่านมา ${META.runs} คืน</div>`:""}${META.scars.length?`<div class="small" style="color:var(--amber)">สิ่งที่ติดตัวมาจากปีก่อน: ${META.scars.join(", ")}</div>`:""}
+ ${META.title?`<div class="small" style="color:var(--amber)">🎖️ ${META.title}</div>`:""}${META.runs?`<div class="small">ปีที่ ${META.year} • ตอนจบ ${n}/100${nh?` • 🩸 ${nh}/30`:""}${nd?` • 🏠 ${nd}/30`:""} • ผ่านมา ${META.runs} คืน</div>`:""}${META.scars.length?`<div class="small" style="color:var(--amber)">สิ่งที่ติดตัวมาจากปีก่อน: ${META.scars.join(", ")}</div>`:""}
  ${can?`<button class="btn primary" onclick="resumeRun()">⏯️ เล่นต่อ</button>`:""}<button class="btn ${can?"":"primary"}" onclick="renderCreate()">🩸 เริ่มคืนใหม่</button>
+ ${dailyBtnH(can)}
+ <button class="btn ghost" onclick="renderDaily()">📅 ภารกิจวันนี้ · ปฏิทิน 30 วัน (${calN()}/30)</button>
+ <button class="btn ghost" onclick="renderProg()">🏆 ความคืบหน้า · Achievement (${Object.keys(META.ach).length}/${OTACH.length})</button>
+ ${goalH()}${installH()}
  ${n||nh||nd?`<button class="btn ghost" onclick="renderBook()">📖 สมุดสะสมตอนจบ (${n+nh+nd}/160)</button>`:""}
  ${META.runs?`<button class="btn ghost" onclick="renderPerks()">🧬 สิ่งที่ติดตัวข้ามปี (🩸 ${META.pts})</button>`:""}
  <div class="howto"><b>เล่นยังไง</b><br>1. เดินสำรวจแต่ละที่ได้ตามใจ ค้นของ หารถ หาที่ซ่อน 🚶<br>2. เลือกเองว่าจะออกทางไหน ถนนใหญ่ ซอย ท่อ ดาดฟ้า 🧭<br>3. ไปถึง 🏠 ก่อนฟ้าสาง โดยหัวใจ ❤️ ไม่หมด</div>
  <button class="btn ghost sm" onclick="toggleSnd()">${SND.on?"🔊 เสียงและการสั่น: เปิด (ใส่หูฟังจะหลอนกว่า)":"🔇 เสียงและการสั่น: ปิด"}</button>
  <div class="small" style="margin-top:20px;color:#5a4a4d">เรื่องแต่งทั้งหมด • มีความรุนแรง • เซฟอัตโนมัติในเครื่องนี้</div></div>`;
 }
-function resumeRun(){ const s=load(SKEY,null); if(!s||s.v!==VER)return renderTitle(); G=s; ambStart(); G.job=JOBS.find(j=>j.id===G.job.id)||G.job; G._c=null; G.flags=G.flags||{}; flow(); }
+function resumeRun(slot){ const s=load(slot||SKEY,null); if(!s||s.v!==VER)return renderTitle(); G=s; ambStart(); G.job=JOBS.find(j=>j.id===G.job.id)||G.job; G._c=null; G.flags=G.flags||{}; flow(); }
 function renderCreate(){
  setNav(false); setTabUI("game"); G=null; const L=META.legacy, ho=huntOpen(), hm=homeOpen();
  app.innerHTML=`<div class="scr"><h2>คืนนี้คุณเป็นใคร</h2>
  <div class="sec">🏃 กลับบ้าน</div><div class="tag">เลิกงานไม่ทันไซเรน ต้องกลับไปหาคนที่รอให้ถึงก่อน 07:00 เลือกได้แค่เพศ ที่เหลือโชคชะตาเลือกให้</div>
  ${L?`<button class="btn primary" onclick="startLegacy()">🔁 คนเดิมจากปีที่แล้ว<div class="cost">${L.gender==="m"?"ชาย":"หญิง"} ${L.age} ปี • ${jobName(L.job)} • รอดมาแล้ว ${L.nights} คืน${L.scars.length?" • มีแผลติดตัว":""}${L.lost?" • ปีที่แล้วเสียคนที่รอไป":""}${(L.grudges||[]).length?" • มีคนแค้นตามมา":""}</div></button>`:""}
- <div class="grid2"><button class="btn ${L?"":"primary"}" onclick="newRun('m',$('#nm').checked)">♂ ${L?"คนใหม่ ":""}ชาย</button><button class="btn ${L?"":"primary"}" onclick="newRun('f',$('#nm').checked)">♀ ${L?"คนใหม่ ":""}หญิง</button></div>
+ <div class="grid2"><button class="btn ${L?"":"primary"}" onclick="newRun('m',$('#nm').checked,{wk:!!($('#wkr')&&$('#wkr').checked)})">♂ ${L?"คนใหม่ ":""}ชาย</button><button class="btn ${L?"":"primary"}" onclick="newRun('f',$('#nm').checked,{wk:!!($('#wkr')&&$('#wkr').checked)})">♀ ${L?"คนใหม่ ":""}หญิง</button></div>
  <div class="sec">🩸 ออกล่า</div>${ho?`<div class="tag">ปีนี้คุณไม่ได้หนี คุณเป็นคนออกไปล่าเอง</div><div class="grid2"><button class="btn" onclick="newHunt('m')">♂ ชาย</button><button class="btn" onclick="newHunt('f')">♀ หญิง</button></div>`:`<div class="small">🔒 ปลดล็อกเมื่อได้ฉากจบหมวด “กลายเป็นนักล่า” สักอัน</div>`}
  <div class="sec">🏠 เฝ้าบ้าน</div>${hm?`<div class="tag">ปีนี้คุณกลับถึงบ้านทัน แต่คนที่คุณรอยังไม่กลับ</div><div class="grid2"><button class="btn" onclick="newHome('m')">♂ ชาย</button><button class="btn" onclick="newHome('f')">♀ หญิง</button></div>`:`<div class="small">🔒 ปลดล็อกเมื่อเล่นครบ 3 คืน</div>`}
+ <div class="panel" style="margin-top:12px"><label style="display:flex;gap:8px;font-size:14px"><input type="checkbox" id="wkr" checked><span><b>🔮 กฎประจำสัปดาห์: ${wkRule().t}</b> — แต้มรอด ×2 · ถึงบ้านครั้งแรกในสัปดาห์ได้ +${WK_REWARD} แต้ม</span></label></div>
  <div class="panel" style="margin-top:12px"><label style="display:flex;gap:8px;font-size:14px"><input type="checkbox" id="nm"><span><b>โหมดไร้ปรานี</b> — ไม่บอกโอกาสสำเร็จ ศัตรูแกร่งขึ้น</span></label></div><button class="btn ghost" onclick="renderTitle()">← กลับ</button></div>`;
 }
 function renderPrep(){

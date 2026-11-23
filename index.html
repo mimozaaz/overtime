@@ -1159,7 +1159,7 @@ K("ch_wire","*","ที่นี่แคบพอดี ทางเข้า�
 const VER=2, SKEY="overtime.save.v2", MKEY="overtime.meta.v1";
 const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
 const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
-const META_DEF=()=>({v:VER,runs:0,endings:{},kills:0,saved:0,betrayed:0,worldGhosts:[],scars:[],year:13,recent:[],best:null,arrived:0,pts:0,perks:{},stash:[],legacy:null,bestKm:0,seenIntro:0,dn:null,cal:null,dq:null,wkDone:{},ach:{},st:{},title:null,theme:null,themeOn:0,sureUp:0,instNo:0});
+const META_DEF=()=>({v:VER,runs:0,endings:{},kills:0,saved:0,betrayed:0,worldGhosts:[],scars:[],year:13,recent:[],best:null,arrived:0,pts:0,perks:{},stash:[],legacy:null,bestKm:0,seenIntro:0,alive:0,chron:[],dn:null,cal:null,dq:null,wkDone:{},ach:{},st:{},title:null,theme:null,themeOn:0,sureUp:0,instNo:0});
 function migrateMeta(m){
  if(!m) return META_DEF();
  const d=META_DEF(); for(const k in d) if(m[k]===undefined) m[k]=d[k];
@@ -1313,7 +1313,7 @@ function retEnd(){const g=G,ex=g.ending.extra;META.st=META.st||{};
 function nextGoals(){const g=[];const D=dnInfo();
  if(!(D.date===otToday()&&D.played))g.push(["🌙","คืนประจำวันของวันนี้ยังไม่ได้เล่น · ได้แต้มโบนัส"]);
  if(!wkDoneNow())g.push(["🔮",`กฎสัปดาห์นี้ “${wkRule().t}”: ถึงบ้านให้ได้ รับ +${WK_REWARD} แต้ม`]);
- if(!homeOpen())g.push(["🏠",`อีก ${3-META.runs} คืน ปลดล็อกโหมดเฝ้าบ้าน`]);
+ if(!homeOpen())g.push(["🏠","รอดถึงเช้าให้ได้สักคืน เพื่อปลดล็อกโหมดเฝ้าบ้าน"]);
  else if(!huntOpen())g.push(["🩸","ได้ฉากจบหมวด “กลายเป็นนักล่า” สักอัน เพื่อปลดโหมดออกล่า"]);
  const nx=Object.entries(PERKS).map(([k,p])=>({p,c:p.c[pk(k)]})).filter(x=>x.c!=null).sort((a,b)=>a.c-b.c)[0];
  if(nx)g.push(["🧬",META.pts>=nx.c?`แต้มพอแลก ${nx.p.n} แล้ว`:`อีก ${nx.c-META.pts} แต้ม แลก ${nx.p.n}`]);
@@ -1537,6 +1537,62 @@ function playIntro(done){let i=0,t0=performance.now(),raf=0,typ=0;const el=docum
  el.querySelector("#isk").onclick=end;el.querySelector("#inx").onclick=next;cv.onclick=next;
  const loop=n=>{const t=(n-t0)/1000;INTRO[i].d(x,t);raf=requestAnimationFrame(loop)};setCap();raf=requestAnimationFrame(loop)}
 
+/* ================= LEGACY v2: ตัวตนข้ามปี · ครอบครัว · ทายาทกับความแค้น · บันทึกตระกูล ================= */
+// L1: คะแนนใจของคืนนี้ (บวก = ช่วย/ให้อภัย, ลบ = ฆ่า/ทิ้ง/หักหลัง)
+function runSoul(g){const f=g.flags||{};return (g.karma||0)+(g.helped||0)*4+(f.spared||0)*3+(f.savedNeighbor?6:0)+(f.forgave?8:0)+(f.escorted?4:0)
+ -(g.kills||0)*3-(f.abandoned?15:0)-(f.soldFriend?25:0)-(f.killedFriend?20:0)-(f.killedKnown?12:0)-(f.cheated?10:0)}
+function soulTitle(v,you){return v>=50?"นักบุญกลางนรก":v>=20?"คนที่ยังมีหัวใจ":v>-20?"คนธรรมดาที่รอดมาได้":v>-50?"คนที่ฆ่าเป็น":"ปีศาจในคราบ"+(you||"คนธรรมดา")}
+const SPOUSE_NAMES={f:["ฝน","มายด์","ปราง","ใบเตย","น้ำฟ้า"],m:["แทน","ภูมิ","ต้นข้าว","กาย","เจ"]},KID_NAMES={f:["ข้าวฟ่าง","ขวัญ","น้ำหวาน"],m:["ข้าวกล้า","ภู","ตะวัน"]};
+// เรียกตอนรอดถึงเช้า: สะสมตัวตน ครอบครัว
+function legacyGrow(NL,L){L=L||{};const soul=Math.max(-100,Math.min(100,Math.round((L.soul||0)*.8+runSoul(G))));
+ NL.soul=soul;NL.title=soulTitle(soul,G.w&&G.w.you);NL.gen=L.gen||1;NL.surname=L.surname||null;NL.events=[];
+ NL.spouse=L.spouse?{...L.spouse,years:(L.spouse.years||0)+1}:null;NL.kids=(L.kids||[]).map(k=>({...k,age:k.age+1}));
+ if(!NL.spouse&&G.ending.arrived&&G.partner&&!G.flags.partnerDied){const pg=G.gender==="m"?"f":"m";NL.spouse={name:pick(SPOUSE_NAMES[pg]),gender:pg,role:G.partner.name,years:0};NL.events.push(`พา${G.partner.name}กลับบ้านด้วย ปีนี้เริ่มอยู่ด้วยกัน`)}
+ if(NL.spouse&&G.flags.cheated){NL.spouse.doubt=(NL.spouse.doubt||0)+1}
+ if(NL.spouse&&NL.spouse.years>=1&&NL.kids.length<2&&chance(.55)){const kg=pick(["f","m"]);NL.kids.push({name:pick(KID_NAMES[kg]),gender:kg,age:0});NL.events.push(`ลูกคนที่ ${NL.kids.length} เกิด ชื่อ${NL.kids[NL.kids.length-1].name}`)}
+ if(!G.sisterSafe&&G.w)NL.mourn={rel:G.w.rel,name:G.w.name||""}}
+// ตายแล้ว: ถ้ามีลูก (หรือคนรอคือลูก) ให้ลูกเล่นต่อ พร้อมความแค้น
+function heirFrom(){if(G.mode!=="run")return null;const L=G.legacy||{};const kids=(L.kids||[]).slice();
+ const wIsKid=G.w&&/^ลูก/.test(G.w.rel)&&G.sisterSafe;let kid=null;
+ if(wIsKid)kid={name:G.w.name||"ลูก",gender:/สาว/.test(G.w.rel)?"f":"m"};else if(kids.length)kid=kids[kids.length-1];
+ if(!kid)return null;const years=wIsKid?ri(6,12):Math.max(1,18-(kid.age||0));
+ const job=pick(JOBS.filter(j=>20>=(j.min||18)&&20<=(j.max||99)));const killer=G._foe&&G._foe.name?G._foe.name:null;
+ const parentRel=G.gender==="m"?"พ่อ":"แม่";
+ return {heir:true,name:kid.name,gender:kid.gender,age:ri(18,23),job:job.id,trait:pick(TRAITS).id,w:null,lost:true,dest:null,nights:0,kills:0,scars:[],
+  grudges:killer?[{who:`${killer} คนที่ฆ่า${parentRel}ของคุณเมื่อ ${years} ปีก่อน`,deep:true,avenge:true}]:[],avenge:killer,parentRel,years,
+  soul:Math.round((L.soul||0)*.3),gen:(L.gen||1)+1,kids:[],spouse:null,parentTitle:L.title||null}}
+// ใช้ตอนเริ่มคืนของคนเดิม/ทายาท
+function applyLegacy(L){const lines=[];
+ if(L.heir){G.flags.heir=1;lines.push(["🩸 "+L.years+" ปีต่อมา",`${L.name}โตพอจะออกมาข้างนอกในคืนไร้กฎแล้ว${L.avenge?` และยังจำชื่อ “${L.avenge}” ได้ไม่เคยลืม`:""}`])}
+ if(L.mourn&&L.lost)lines.push(["🕯️ ปีนี้ไม่มี"+L.mourn.rel+"รออีกแล้ว",`ตั้งแต่คืนนั้น${L.mourn.name?" "+L.mourn.name:""}ก็ไม่ได้กลับมาอีกเลย คนที่รอปีนี้คือคนอื่น`]);
+ if(L.spouse&&!L.heir){const kids=L.kids||[],kidTxt=kids.length?(kids.length>1?`ลูก ${kids.length} คน`:"ลูก"+(kids[0].age<=1?"อ่อน":"")):"";
+  G.w={rel:kids.length?`${L.spouse.gender==="f"?"เมีย":"ผัว"}กับ${kidTxt}`:(L.spouse.gender==="f"?"เมีย":"ผัว"),n:L.spouse.gender==="f"?"เมีย":"ผัว",you:"ที่รัก",i:L.spouse.gender==="f"?"เค้า":"เค้า",self:"ที่รัก",arch:"y",name:L.spouse.name,bt:["hostage","impostor","money"],spouse:1,kids:kids.length};
+  if(kids.some(k=>k.age===0))lines.push(["👶 ลูกเพิ่งเกิด",`ปีนี้ที่บ้านมี${L.spouse.name}กับลูกอ่อนรออยู่ ถ้าคุณไม่กลับไป ไม่มีใครปกป้องพวกเขา`]);
+  if(L.spouse.doubt){G.flags.spouseDoubt=L.spouse.doubt;if(chance(.35*L.spouse.doubt)){G.homeBetray=true;G.betrayType="money"}}}
+ const v=L.soul||0;G.soulStart=v;
+ if(v>=50){G.money+=300;if(G.homeBetray&&chance(.5))G.homeBetray=false;lines.push(["🕊️ "+(L.title||"นักบุญกลางนรก"),"คนที่คุณเคยช่วยเมื่อปีก่อนฝากเงิน 300 บาทไว้ให้ ข่าวว่าคุณช่วยคนไปทั่ว"])}
+ else if(v>=20){G.money+=150;lines.push(["🤝 "+(L.title||"คนที่ยังมีหัวใจ"),"มีคนจำได้ว่าคุณเคยช่วย เขาฝากเงินไว้ให้ 150 บาท"])}
+ else if(v<=-50){G.grudges.push({who:"พี่ชายของคนที่คุณฆ่าเมื่อปีก่อน",deep:true,shown:false},{who:"แก๊งที่อยากได้คุณไปเป็นพวก หรือไม่ก็อยากให้คุณตาย",deep:true,shown:false});if(!G.homeBetray&&chance(.2)){G.homeBetray=true;G.betrayType=pick(G.w.bt)}G.flags.feared=1;lines.push(["😈 "+(L.title||"ปีศาจ"),`ข่าวเรื่องที่คุณทำเมื่อปีก่อนไปถึงหูคนทั้งเขต แม้แต่${G.w.rel}ก็เริ่มกลัวคุณ`])}
+ else if(v<=-20){G.grudges.push({who:"ญาติของคนที่คุณฆ่าเมื่อปีก่อน",deep:true,shown:false});G.flags.feared=1;lines.push(["🔪 "+(L.title||"คนที่ฆ่าเป็น"),"มีคนตามหาคุณเพราะเรื่องเมื่อปีก่อน"])}
+ for(const [t,x] of lines)carry(t,x);
+ G._legacyOpen=L.heir?`${G.w.you} ระวังตัวด้วยนะ ปีนี้เป็นปีแรกที่ออกไปข้างนอก`:v<=-50?`${G.w.you}... ปีนี้อย่าทำแบบปีที่แล้วอีกนะ ${G.w.i}กลัว`:L.spouse&&(L.kids||[]).length?`ลูกหลับแล้ว ${G.w.i}กับลูกรออยู่นะ กลับมาให้ได้`:null}
+// L5: บันทึกตระกูล (ทุกคืนในโหมดกลับบ้าน)
+function chronAdd(){if(G.mode!=="run"||G.dn)return;const e=G.ending,L=G.legacy||{};META.chron=META.chron||[];
+ const soulNow=Math.max(-100,Math.min(100,Math.round((L.soul||0)*.8+runSoul(G))));
+ const notes=[];if(G.flags.heir&&L.avenge)notes.push(G.flags.avenged?`แก้แค้น ${L.avenge} สำเร็จ`:G.flags.forgave?`ให้อภัย ${L.avenge}`:`ยังไม่ได้แก้แค้น ${L.avenge}`);
+ if(G.partner&&!G.flags.partnerDied&&e.arrived&&!L.spouse)notes.push(`พา${G.partner.name}กลับบ้าน`);if(G.flags.partnerDied)notes.push("คนรักตายแทน");
+ if(G.flags.abandoned)notes.push("ทิ้งเพื่อนไว้ข้างหลัง");if(G.flags.soldFriend)notes.push("ขายเพื่อนให้นักล่า");if(G.flags.cheated)notes.push("มีเรื่องที่บ้านไม่รู้");
+ if(!G.sisterSafe)notes.push(`${G.w.rel}ไม่ปลอดภัย`);if(G.kills)notes.push(`ฆ่า ${G.kills} คน`);if(G.helped)notes.push(`ช่วย ${G.helped} คน`);
+ META.chron.push({y:META.year,gen:L.gen||1,heir:!!L.heir,gender:G.gender,age:G.age,job:jobName(G.job.id),rid:G.rid,title:e.alive?soulTitle(soulNow,G.w&&G.w.you):(L.title||null),
+  end:e.title,alive:!!e.alive,arrived:!!e.arrived,w:G.w?G.w.rel+(G.w.name?" "+G.w.name:""):"",notes:notes.slice(0,4)});META.chron=META.chron.slice(-40)}
+function renderChron(){setNav(false);setTabUI("game");UI.choices=[];const C=(META.chron||[]).slice().reverse();
+ app.innerHTML=`<div class="scr"><h2>📜 บันทึกตระกูล</h2><div class="small">ทุกปีที่ผ่านมา ใครรอด ใครไม่กลับบ้าน และใครกลายเป็นอะไร</div>
+ ${C.map(c=>`<div class="panel" style="display:flex;gap:12px;align-items:flex-start${c.alive?"":";opacity:.8"}"><img class="endpt" style="width:56px;height:56px;${c.alive?"":"filter:grayscale(1)"}" src="${portrait({rid:c.rid,gender:c.gender,age:c.age})}"><div style="flex:1">
+ <b style="font-family:'Chakra Petch',sans-serif">ปีที่ ${c.y} ${c.gen>1?`· รุ่นที่ ${c.gen}`:""}${c.heir?" · ทายาท":""}</b><div class="small">${c.gender==="m"?"ชาย":"หญิง"} ${c.age} ปี · ${c.job} · คนรอ: ${c.w}</div>
+ <div style="margin-top:4px;color:${c.alive?"var(--green)":"var(--red)"}">${c.alive?(c.arrived?"🏠 ถึงบ้าน":"🌅 รอดถึงเช้า"):"✝️ ไม่ได้กลับบ้าน"} · ${c.end}</div>
+ ${c.title?`<div class="small" style="color:var(--amber)">🎖️ ${c.title}</div>`:""}${c.notes.length?`<div class="small">${c.notes.join(" · ")}</div>`:""}</div></div>`).join("")||'<div class="panel small">ยังไม่มีบันทึก</div>'}
+ <button class="btn ghost" onclick="renderTitle()">← กลับ</button></div>`;window.scrollTo(0,0)}
+
 function saveRun(){ if(G&&!G.over) save(G.dn?SKEY_D:SKEY,G); }
 function saveMeta(){ save(MKEY,META); }
 const place=n=>n.p==="home"?{n:G.dest,ic:"🏠",d:0,loot:["-"]}:PLACES[n.p];
@@ -1710,6 +1766,7 @@ function newRun(gender,noMercy,opt){
  if(META.scars.includes("ไม่ไว้ใจใคร")) G.flags.wary=true;
  if(L){ G.vet=Math.min(3,L.nights||1); G.hpMax+=G.vet*4; if(L.scars.includes("kidney")) G.hpMax-=25; if(L.scars.includes("leg")) G.legHurt=true; if(L.scars.includes("mind")) G.sanity=80; G.hp=G.hpMax;
   if(L.grudges&&L.grudges.length) G.grudges=L.grudges.map(g=>({who:g.who,deep:g.deep,shown:false})).concat(chance(.5)?G.grudges.slice(0,1):[]); }
+ if(L) applyLegacy(L);
  if(HM){ G.hunter.off=true; G.flags.huntMode=true; }
  G.map=genMap(fairKm(km),startPlace); G.at=0; G.startId=0; G.homeId=G.map.nodes.length-1;
  // gangs
@@ -1717,7 +1774,7 @@ function newRun(gender,noMercy,opt){
  const ng=Math.round(2+G.map.L/2.5)+(G.rule.moreGangs?2:0); G.gangs=[];
  for(let i=0;i<ng&&mid.length;i++) G.gangs.push({at:pick(mid.filter(n=>n.l>1||mid.length<4)||mid).id,type:pick(["mask","mask","punk","punk","cult","hunter","robber"])});
  lookAround(); if(pk("intel")) reveal(pk("intel")*2);
- buildTimeline(); if(HM) pushChat("them",{y:"{you}จะไปไหน ไซเรนจะดังแล้วนะ",e:"{you}ไม่อยู่บ้านเหรอ ไซเรนจะดังแล้ว",p:"มึงอยู่ไหน ไซเรนจะดังละ"}[w.arch],true); else CHAT[w.arch].open.forEach(t=>pushChat("them",t,true));
+ buildTimeline(); if(G._legacyOpen){ pushChat('them',G._legacyOpen,true); G._legacyOpen=null; } if(HM) pushChat("them",{y:"{you}จะไปไหน ไซเรนจะดังแล้วนะ",e:"{you}ไม่อยู่บ้านเหรอ ไซเรนจะดังแล้ว",p:"มึงอยู่ไหน ไซเรนจะดังละ"}[w.arch],true); else CHAT[w.arch].open.forEach(t=>pushChat("them",t,true));
  if(L&&!L.lost) pushChat("them",LEG_OPEN[w.arch],true);
  if(HM) renderPrepHunt(); else renderPrep();
 }
@@ -2920,6 +2977,7 @@ function finishEnding(pair){
  META.saved+=G.helped; META.betrayed+=G.betrayedCount; if(G.ending.arrived&&ENDINGS[cat]) META.arrived++;
  if(cat==="hunter") META.worldGhosts.push({type:"hunter"}); if(!alive&&ENDINGS[cat]) META.worldGhosts.push({type:"corpse"}); META.worldGhosts=META.worldGhosts.slice(-4);
  if(alive){ if(G.betrayedCount>0&&!META.scars.includes("ไม่ไว้ใจใคร"))META.scars.push("ไม่ไว้ใจใคร"); if(G.sanity<30&&!META.scars.includes("นอนไม่หลับ"))META.scars.push("นอนไม่หลับ"); }
+ if(G.mode==='run'&&G.ending.alive) META.alive=(META.alive||0)+1;
  G.ending.pts=runPoints()*(G.wkr!=null?2:1); META.pts=(META.pts||0)+G.ending.pts; G.ending.extra=[]; retEnd(); if(!G.dn) saveLegacy();
  META.recent=Object.keys(G.used).concat(META.recent).slice(0,60); META.year++;
  saveMeta(); try{localStorage.removeItem(G.dn?SKEY_D:SKEY);}catch(e){}
@@ -2982,6 +3040,7 @@ function renderTitle(){
  <button class="btn ghost" onclick="renderDaily()">📅 ภารกิจวันนี้ · ปฏิทิน 30 วัน (${calN()}/30)</button>
  <button class="btn ghost" onclick="renderProg()">🏆 ความคืบหน้า · Achievement (${Object.keys(META.ach).length}/${OTACH.length})</button>
  ${goalH()}${installH()}
+ ${(META.chron||[]).length?`<button class="btn ghost" onclick="renderChron()">📜 บันทึกตระกูล (${META.chron.length} ปี)</button>`:""}
  <button class="btn ghost" onclick="playIntro()">🎬 ดูฉากเปิดอีกครั้ง</button>
  ${n||nh||nd?`<button class="btn ghost" onclick="renderBook()">📖 สมุดสะสมตอนจบ (${n+nh+nd}/160)</button>`:""}
  ${META.runs?`<button class="btn ghost" onclick="renderPerks()">🧬 สิ่งที่ติดตัวข้ามปี (🩸 ${META.pts})</button>`:""}
@@ -2994,10 +3053,10 @@ function renderCreate(){
  setNav(false); setTabUI("game"); G=null; const L=META.legacy, ho=huntOpen(), hm=homeOpen();
  app.innerHTML=`<div class="scr"><div class="timecard"><div class="tc-h"><b>บัตรตอกเวลา</b><span>OVERTIME / ใบที่ ${META.runs+1}</span></div><div class="tc-row"><span>เข้างาน</span><b>08:00</b></div><div class="tc-row"><span>ออกงาน</span><b class="tc-late">—:— ยังไม่ได้ตอก</b></div><div class="tc-stamp">เลยเวลาไซเรน</div></div><h2>คืนนี้คุณเป็นใคร</h2>
  <div class="sec">🏃 กลับบ้าน</div><div class="tag">เลิกงานไม่ทันไซเรน ต้องกลับไปหาคนที่รอให้ถึงก่อน 07:00 เลือกได้แค่เพศ ที่เหลือโชคชะตาเลือกให้</div>
- ${L?`<button class="btn primary" onclick="startLegacy()">🔁 คนเดิมจากปีที่แล้ว<div class="cost">${L.gender==="m"?"ชาย":"หญิง"} ${L.age} ปี • ${jobName(L.job)} • รอดมาแล้ว ${L.nights} คืน${L.scars.length?" • มีแผลติดตัว":""}${L.lost?" • ปีที่แล้วเสียคนที่รอไป":""}${(L.grudges||[]).length?" • มีคนแค้นตามมา":""}</div></button>`:""}
+ ${L&&L.heir?`<button class="btn primary" onclick="startLegacy()">🩸 ${L.name} ลูกของ${L.parentRel} ออกมาในคืนไร้กฎ<div class="cost">${L.gender==="m"?"ชาย":"หญิง"} ${L.age} ปี • ${L.years} ปีหลังจากคืนที่${L.parentRel}ไม่ได้กลับบ้าน${L.avenge?` • ตามหา “${L.avenge}”`:""}</div></button>`:""}${L&&!L.heir?`<button class="btn primary" onclick="startLegacy()">🔁 คนเดิมจากปีที่แล้ว${L.title?` · ${L.title}`:""}<div class="cost">${L.gender==="m"?"ชาย":"หญิง"} ${L.age} ปี • ${jobName(L.job)} • รอดมาแล้ว ${L.nights} คืน${L.scars.length?" • มีแผลติดตัว":""}${L.lost?" • ปีที่แล้วเสียคนที่รอไป":""}${(L.grudges||[]).length?" • มีคนแค้นตามมา":""}${L.spouse?` • อยู่กับ${L.spouse.name}${(L.kids||[]).length?` และลูก ${L.kids.length} คน`:""}`:""}</div></button>`:""}
  <div class="grid2"><button class="btn ${L?"":"primary"}" onclick="newRun('m',$('#nm').checked,{wk:!!($('#wkr')&&$('#wkr').checked)})">♂ ${L?"คนใหม่ ":""}ชาย</button><button class="btn ${L?"":"primary"}" onclick="newRun('f',$('#nm').checked,{wk:!!($('#wkr')&&$('#wkr').checked)})">♀ ${L?"คนใหม่ ":""}หญิง</button></div>
  <div class="sec">🩸 ออกล่า</div>${ho?`<div class="tag">ปีนี้คุณไม่ได้หนี คุณเป็นคนออกไปล่าเอง</div><div class="grid2"><button class="btn" onclick="newHunt('m')">♂ ชาย</button><button class="btn" onclick="newHunt('f')">♀ หญิง</button></div>`:`<div class="small">🔒 ปลดล็อกเมื่อได้ฉากจบหมวด “กลายเป็นนักล่า” สักอัน</div>`}
- <div class="sec">🏠 เฝ้าบ้าน</div>${hm?`<div class="tag">ปีนี้คุณกลับถึงบ้านทัน แต่คนที่คุณรอยังไม่กลับ</div><div class="grid2"><button class="btn" onclick="newHome('m')">♂ ชาย</button><button class="btn" onclick="newHome('f')">♀ หญิง</button></div>`:`<div class="small">🔒 ปลดล็อกเมื่อเล่นครบ 3 คืน</div>`}
+ <div class="sec">🏠 เฝ้าบ้าน</div>${hm?`<div class="tag">ปีนี้คุณกลับถึงบ้านทัน แต่คนที่คุณรอยังไม่กลับ</div><div class="grid2"><button class="btn" onclick="newHome('m')">♂ ชาย</button><button class="btn" onclick="newHome('f')">♀ หญิง</button></div>`:`<div class="small">🔒 ปลดล็อกเมื่อรอดถึงเช้าได้สักคืน ต้องผ่านคืนนั้นมาก่อน ถึงจะรู้ว่าคนที่รอต้องเจออะไร</div>`}
  <div class="panel" style="margin-top:12px"><label style="display:flex;gap:8px;font-size:14px"><input type="checkbox" id="wkr" checked><span><b>🔮 กฎประจำสัปดาห์: ${wkRule().t}</b> — แต้มรอด ×2 · ถึงบ้านครั้งแรกในสัปดาห์ได้ +${WK_REWARD} แต้ม</span></label></div>
  <div class="panel" style="margin-top:12px"><label style="display:flex;gap:8px;font-size:14px"><input type="checkbox" id="nm"><span><b>โหมดไร้ปรานี</b> — ไม่บอกโอกาสสำเร็จ ศัตรูแกร่งขึ้น</span></label></div><button class="btn ghost" onclick="renderTitle()">← กลับ</button></div>`;
 }
@@ -3009,7 +3068,7 @@ function renderPrep(){
  const hint=t=>t.startsWith("veh:")?"ได้รถ ไปเร็วขึ้นมาก":t==="ชุดปฐมพยาบาล"?"รักษาแผลได้เยอะ":t==="ขวดน้ำ"||t==="อาหารกระป๋อง"?"กินแล้วหายเหนื่อย":t==="ไฟฉาย"?"ค้นของเจอง่ายขึ้น":t==="พาวเวอร์แบงก์"?"ชาร์จมือถือ":t==="fuel"?"เติมรถ":t==="ammo"?"กระสุนปืน":t[0]==="$"?"ใช้จ่ายหรือติดสินบน":WEAPONS[t]?"อาวุธ":"";
  const why=own?G.job.why:pick(["รถเที่ยวสุดท้ายไม่มา","โดนปล้นกลางทางจนไม่เหลืออะไร","รถเสียกลางทาง","ไปธุระแล้วกลับไม่ทัน","หลงทางตอนหาทางลัดกลับ"])+" เลยมาติดอยู่แถว"+pl.n;
  const wn=G.w.rel+(G.w.name?" “"+G.w.name+"”":"");
- const LG=G.legacy, legTxt=LG?`🔁 ปีที่ ${(LG.nights||1)+1} ของคนนี้ ${LG.lost?"ปีที่แล้วเสีย"+LG.w.rel+"ไป ปีนี้คนที่รอคือ"+G.w.rel:"ปีที่แล้วจบที่ “"+LG.lastEnd+"”"}${LG.scars.length?" • แผลติดตัว: "+LG.scars.map(x=>SCAR_TXT[x]).join(", "):""}${G.grudges.some(g=>g.deep)?" • มีคนจากปีก่อนที่ยังแค้นอยู่":""}`:"";
+ const LG=G.legacy, legTxt=LG?`${LG.heir?`🩸 รุ่นที่ ${LG.gen} • ${LG.years} ปีหลังจากคืนที่${LG.parentRel}ไม่ได้กลับบ้าน`:`🔁 ปีที่ ${(LG.nights||1)+1} ของคนนี้`}${LG.title?" • "+LG.title:""} ${LG.heir?"ปีนี้คนที่รอคือ"+G.w.rel:LG.lost?"ปีที่แล้วเสีย"+(LG.w?LG.w.rel:"คนที่รอ")+"ไป ปีนี้คนที่รอคือ"+G.w.rel:"ปีที่แล้วจบที่ “"+LG.lastEnd+"”"}${LG.scars.length?" • แผลติดตัว: "+LG.scars.map(x=>SCAR_TXT[x]).join(", "):""}${G.grudges.some(g=>g.deep)?" • มีคนจากปีก่อนที่ยังแค้นอยู่":""}`:"";
  const draw=()=>{ app.innerHTML=`<div class="scr"><div class="panel flash"><div class="scene-ic">${pl.ic}</div>${legTxt?`<div class="small" style="color:var(--amber);margin-bottom:6px">${legTxt}</div>`:""}<div class="loc">18:52 • ${pl.n} ย่าน${G.routeFrom}</div>
   <div class="who">คุณคือ${G.gender==="m"?"ผู้ชาย":"ผู้หญิง"} ${G.age} ปี อาชีพ${G.job.name}</div>
   <div class="story">${why}\n\nอีก 8 นาทีไซเรนจะดัง แล้วกฎหมายทุกข้อจะหายไป 12 ชั่วโมง\n<b>${wn}</b> รออยู่คนเดียวที่${G.dest} ห่างออกไป <b>${G.map.km} กม.</b>\nตอนนี้คุณ${G.veh==="เดินเท้า"?"ไม่มีรถ ต้องเดิน":"มี"+G.veh}</div>
@@ -3111,7 +3170,7 @@ const MODE_HINT={
 const mainN=()=>Object.keys(META.endings).filter(k=>ENDINGS[k.split(":")[0]]).length;
 const modeN=m=>Object.keys(META.endings).filter(k=>(MODE_END[m]||{})[k.split(":")[0]]).length;
 const huntOpen=()=>Object.keys(META.endings).some(k=>k.startsWith("hunter:"));
-const homeOpen=()=>META.runs>=3;
+const homeOpen=()=>(META.alive||0)>=1||(META.arrived||0)>=1;
 function pickUnseen(cat,arr){ arr=arr.filter(x=>x!=null&&x>=0); if(!arr.length) return null; const un=arr.filter(i=>!META.endings[cat+":"+i]); return [cat,pick(un.length&&chance(.75)?un:arr)]; }
 
 //========================= คนเดิมปีถัดไป =========================
@@ -3119,7 +3178,8 @@ const jobName=id=>{ const j=JOBS.find(x=>x.id===id); return j?j.name:"คนธ�
 function saveLegacy(){
  const e=G.ending, f=G.flags;
  if(G.mode&&G.mode!=="run") return;
- if(!e.alive){ META.legacy=null; return; }
+ chronAdd();
+ if(!e.alive){ META.legacy=heirFrom(); return; }
  const L=G.legacy||{nights:0,kills:0,scars:[]}, scars=(L.scars||[]).slice();
  if(f.lostKidney&&!scars.includes("kidney")) scars.push("kidney");
  if(G.legHurt&&!scars.includes("leg")) scars.push("leg");
@@ -3129,6 +3189,7 @@ function saveLegacy(){
  if(f.soldFriend) gr.push({who:"คนที่เคยถูกขายให้นักล่าเมื่อปีก่อน",deep:true});
  META.legacy={gender:G.gender,age:G.age+1,job:G.job.id,trait:G.trait.id,w:G.w,dest:G.dest,nights:(L.nights||0)+1,kills:(L.kills||0)+G.kills,
   scars,grudges:gr.slice(-3),lost:!G.sisterSafe,arrived:!!e.arrived,lastEnd:e.title};
+ legacyGrow(META.legacy,L);
 }
 function startLegacy(){ const L=META.legacy; if(!L) return renderCreate(); newRun(L.gender,$('#nm')&&$('#nm').checked,{legacy:L}); }
 const SCAR_TXT={kidney:"ไตเหลือข้างเดียว เลือดน้อยลง",leg:"ขาเจ็บเก่า เดินช้าลง",mind:"ฝันร้ายทุกคืน สติเปราะ"};
@@ -3248,7 +3309,7 @@ function huntBait(){ G.flags.baitMet=true; const pr=pOf(.5,"read");
   {l:"↩️ ไม่ยุ่ง ไปทางอื่น",k:"card",go:()=>toast("ไม่ยุ่ง","มีบางอย่างไม่ถูกต้อง เดินอ้อมออกไปอีกทาง")}]}); }
 function baitWin(){ G._baitDeath=false; G.bounty+=450; G.targets+=1; toast("ล้มกับดัก","คนที่ซุ่มอยู่ล้มหมด แก้เชือกที่ข้อเท้าเด็ก เด็กวิ่งหายไปโดยไม่พูดอะไร สโมสรจ่ายค่าหัวพวกซุ่มให้ด้วย"); }
 function huntLegacy(){ G.flags.metLegacy=true; const L=META.legacy;
- show({loc:"🎯 คนที่หน้าคุ้นมาก",flash:true,text:`${L.gender==="m"?"ผู้ชาย":"ผู้หญิง"}อายุราว ${L.age} ปี ใส่ชุดทำงาน${jobName(L.job)} วิ่งกระหืดกระหอบ มือกำมือถือแน่น บนจอมีแชตจาก${L.w.rel}เด้งไม่หยุด\n\nหน้าตา ท่าทาง วิธีวิ่ง ทุกอย่างเหมือนคนที่เคยหนีกลับบ้านเมื่อปีก่อน เหมือนกันจนขนลุก`,k:"card",choices:[
+ show({loc:"🎯 คนที่หน้าคุ้นมาก",flash:true,text:`${L.gender==="m"?"ผู้ชาย":"ผู้หญิง"}อายุราว ${L.age} ปี ใส่ชุดทำงาน${jobName(L.job)} วิ่งกระหืดกระหอบ มือกำมือถือแน่น บนจอมีแชตจาก${L.w?L.w.rel:"ที่บ้าน"}เด้งไม่หยุด\n\nหน้าตา ท่าทาง วิธีวิ่ง ทุกอย่างเหมือนคนที่เคยหนีกลับบ้านเมื่อปีก่อน เหมือนกันจนขนลุก`,k:"card",choices:[
   {l:"🔫 ลงมือ ค่าหัวสูงสุดของคืน",k:"fight",go:()=>{ G._tgt={b:1200,c:1}; G.flags.killedSelf=true; G.sanity=clamp(G.sanity+sanFx(-25),0,100); startCombat("worker",{name:"คนที่หน้าเหมือนตัวเอง",count:1,hpMul:1.2,desc:"เขาหันมาสู้ ตาเหมือนกันเปี๊ยบ",onWin:"targetDown"}); }},
   {l:"🕊️ ปล่อยเขาไป บอกทางลัดให้ด้วย",k:"card",go:()=>{ G.flags.sparedSelf=true; G.mercy+=3; G.sanity=clamp(G.sanity+15,0,100); toast("ไปเถอะ","“ไปทางท่อระบายน้ำ ไม่มีด่าน” เขามองหน้านาน เหมือนจะถามอะไร แต่ไม่ได้ถาม แล้ววิ่งไป"); }}]}); }
 function huntHomeAlarm(){ G.flags.homeAlarm=true; const W=G.w.n;

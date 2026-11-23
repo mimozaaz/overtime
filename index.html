@@ -5,6 +5,75 @@
   --bg:#0a0607; --bg2:#120a0c; --ink:#e8dcdc; --dim:#9a8888; --red:#ff2b3d; --red2:#b0121f;
   --neon:#ff3b5c; --amber:#ffb039; --green:#4fd77a; --blue:#4fb0ff; --panel:#160d10; --line:#2a1a1e;
 }
+
+/* ================= VISUAL v3: CCTV / ประกาศฉุกเฉิน ================= */
+body{font-family:"IBM Plex Sans Thai","Sukhumvit Set","Noto Sans Thai",sans-serif;background:#070405}
+.logo,.loc,.btn,.hud,.sec,h2,h3,.kv b,.clock,.road-km,.night-badge,.cost,.ticker{font-family:"Chakra Petch","IBM Plex Sans Thai",sans-serif}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:40;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.65) 100%)}
+body::after{content:"";position:fixed;inset:-50%;pointer-events:none;z-index:41;opacity:.07;
+ background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");animation:grain .6s steps(3) infinite}
+@keyframes grain{0%{transform:translate(0,0)}33%{transform:translate(-3%,2%)}66%{transform:translate(2%,-3%)}100%{transform:translate(0,0)}}
+#app::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:39;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px)}
+.scr{animation:crtIn .22s ease-out}
+@keyframes crtIn{0%{opacity:0;filter:brightness(2.2) saturate(0);transform:scaleY(.985)}60%{opacity:1;filter:brightness(1.2)}100%{filter:none;transform:none}}
+.panel{border-radius:4px;border:1px solid #3a2228;background:linear-gradient(180deg,#140b0d,#0e0809);position:relative;
+ box-shadow:inset 0 0 0 1px rgba(255,59,92,.04),0 8px 24px rgba(0,0,0,.45)}
+.panel::before,.panel::after{content:"";position:absolute;width:10px;height:10px;border-color:rgba(255,176,57,.55);border-style:solid;pointer-events:none}
+.panel::before{top:-1px;left:-1px;border-width:2px 0 0 2px}.panel::after{bottom:-1px;right:-1px;border-width:0 2px 2px 0}
+.loc{letter-spacing:.5px;text-transform:uppercase;font-size:12px;color:var(--amber)}
+@keyframes rec{50%{opacity:.15}}
+.btn{border-radius:3px;letter-spacing:.3px;position:relative;overflow:hidden}
+.btn.primary{background:linear-gradient(180deg,#e0263f,#9c1427);border:1px solid #ff5a72;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 18px rgba(255,59,92,.25)}
+.btn.primary::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.06) 0 1px,transparent 1px 3px);pointer-events:none}
+.btn:active{filter:brightness(1.3)}
+.btn.ghost{border-style:dashed}
+img.pxi{image-rendering:pixelated;width:64px;height:64px;display:block;margin:0 auto 6px;filter:drop-shadow(0 0 8px rgba(255,59,92,.25))}
+.tic img.pxi{width:28px;height:28px;margin:0;display:inline-block;vertical-align:middle;filter:none}
+.scene-ic{line-height:1}
+.hud{font-family:"Chakra Petch",sans-serif;border-bottom:1px solid #2a1a1e;background:linear-gradient(180deg,rgba(10,6,7,.96),rgba(10,6,7,.85))}
+.hud .clock::before{content:"● REC ";color:var(--neon);font-size:11px;animation:rec 1.2s steps(2) infinite;vertical-align:middle}
+.road{border-radius:2px;background:repeating-linear-gradient(90deg,#1a0f12 0 9px,#0a0607 9px 10px)!important}
+.road-fill{border-radius:0!important;background:repeating-linear-gradient(90deg,var(--neon) 0 9px,transparent 9px 10px)!important;box-shadow:0 0 10px rgba(255,59,92,.5)}
+img.phrt{width:18px;height:18px;image-rendering:pixelated;vertical-align:middle;margin-right:2px}
+img.hudpt{width:34px;height:34px;image-rendering:pixelated;border:1px solid #3a2228;background:#120a0c;vertical-align:middle;margin-right:6px}
+.logo{font-family:"Chakra Petch",sans-serif;position:relative;animation:glitch 4s infinite}
+@keyframes glitch{0%,92%,100%{text-shadow:0 0 18px rgba(255,59,92,.6);transform:none}93%{text-shadow:-3px 0 #4fb0ff,3px 0 #ff3b5c;transform:translateX(2px)}95%{text-shadow:3px 0 #4fb0ff,-3px 0 #ff3b5c;transform:translateX(-2px)}97%{text-shadow:none;transform:skewX(8deg)}}
+.skyline{display:block;width:100%;image-rendering:pixelated;border:1px solid #2a1a1e;border-radius:3px;margin:-6px 0 10px;background:#05030a}
+.ticker{overflow:hidden;white-space:nowrap;border:1px solid #3a2228;background:#120709;color:var(--amber);font-size:13px;padding:6px 0;margin:4px 0 10px;border-radius:3px}
+.ticker b{color:#fff;background:var(--neon);padding:2px 6px;margin-right:8px;position:relative;z-index:1}
+.ticker span{display:inline-block;padding-left:100%;animation:tick 38s linear infinite}
+@keyframes tick{to{transform:translateX(-100%)}}
+#intro{position:fixed;inset:0;z-index:60;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:14px}
+#intro canvas{width:min(100%,560px);image-rendering:pixelated;border:1px solid #2a1a1e}
+#intro .cap{font-family:"Chakra Petch","IBM Plex Sans Thai",sans-serif;color:#eadfcd;font-size:18px;min-height:56px;text-align:center;max-width:560px;line-height:1.5}
+#intro .cap em{color:var(--neon);font-style:normal}
+
+.todo{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.todo span{font-family:"Chakra Petch","IBM Plex Sans Thai",sans-serif;font-size:12.5px;padding:3px 8px;border-radius:3px;background:#1d1013;border:1px solid #4a2a30;color:#f3e7d6}
+.todo span.t1{border-color:var(--amber);color:var(--amber);background:#221608;animation:todoP 2.4s ease-in-out infinite}
+@keyframes todoP{50%{box-shadow:0 0 0 2px rgba(255,176,57,.18)}}
+.btn.suggest{border-color:var(--amber)!important;box-shadow:0 0 0 1px rgba(255,176,57,.4),0 0 16px rgba(255,176,57,.18)}
+.btn.suggest::before{content:"แนะนำ";position:absolute;top:0;right:0;background:var(--amber);color:#1a0f05;font-size:10.5px;font-weight:700;padding:1px 6px;border-bottom-left-radius:3px;font-family:"Chakra Petch",sans-serif}
+.trend{font-size:11px;color:#b9a9ad;margin-left:3px}
+img.mini{width:22px;height:22px;image-rendering:pixelated;vertical-align:middle;border:1px solid #3a2228;background:#120a0c;margin-left:2px}
+img.chatav{width:36px;height:36px;image-rendering:pixelated;vertical-align:middle;border:1px solid #3a2228;margin-right:8px;background:#120a0c}
+#inter{position:fixed;inset:0;z-index:58;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;animation:crtIn .3s ease-out;cursor:pointer}
+#inter canvas{width:min(92vw,520px);image-rendering:pixelated;border:1px solid #2a1a1e}
+#inter .ih{font-family:"Chakra Petch",sans-serif;color:var(--neon);letter-spacing:2px;font-size:13px}
+#inter .it{font-family:"Chakra Petch","IBM Plex Sans Thai",sans-serif;color:#eadfcd;font-size:20px;text-align:center;max-width:520px;padding:0 16px}
+#inter .is{color:#8a7a7e;font-size:12px}
+
+#intro>*{flex:0 0 auto}
+.endcam{display:flex;gap:12px;align-items:center;justify-content:center;margin:0 auto 10px;padding:8px 12px;border:1px solid #3a2228;background:#0e0809;width:max-content;max-width:100%;font-family:"Chakra Petch",sans-serif}
+.endcam b{display:block;color:var(--neon);font-size:12px;letter-spacing:.5px}.endcam span{font-size:12px;color:#9a8a8e}
+img.endpt{width:64px;height:64px;image-rendering:pixelated;filter:grayscale(.6) contrast(1.2);border:1px solid #3a2228}
+.timecard{position:relative;background:#e9dfc9;color:#2a1a14;border-radius:3px;padding:12px 14px;margin:4px 0 14px;font-family:"Chakra Petch",monospace;box-shadow:0 6px 18px rgba(0,0,0,.5);transform:rotate(-1deg)}
+.timecard .tc-h{display:flex;justify-content:space-between;border-bottom:1px dashed #8a7a66;padding-bottom:6px;margin-bottom:6px}.timecard .tc-h span{font-size:12px;color:#6b5a48}
+.timecard .tc-row{display:flex;justify-content:space-between;font-size:14px;padding:2px 0}.tc-late{color:#b3162f}
+.timecard .tc-stamp{display:table;margin:6px 0 0 auto;border:2px solid #b3162f;color:#b3162f;padding:2px 8px;font-weight:700;transform:rotate(-12deg);opacity:.85;font-size:13px}
+#intro .bar{display:flex;justify-content:space-between;align-items:center;width:min(100%,560px);color:#7a6a6e;font-size:13px;font-family:"Chakra Petch",sans-serif}
+#intro .bar button{background:none;border:1px solid #3a2228;color:#cbbfc1;padding:8px 14px;border-radius:3px;font-family:inherit;width:auto;height:auto;min-height:0;margin:0;flex:0 0 auto;font-size:14px}
+
 body.dawnth{--red:#3bd1ff;--red2:#126a8a;--neon:#3bd1ff}
 #otpop{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:50;display:flex;flex-direction:column;gap:6px;width:min(92vw,440px);pointer-events:none}
 #otpop div{background:#1d1114;border:1px solid var(--amber);color:var(--amber);border-radius:12px;padding:10px 14px;font-weight:700;box-shadow:0 6px 24px rgba(0,0,0,.6)}
@@ -183,7 +252,8 @@ input,button{font-family:inherit}
 .blur{filter:blur(2.2px);transition:filter 2s}.ghostw{color:#ff2b3d;font-weight:800;letter-spacing:1px}
 .btn.phantom{border-style:dashed;opacity:.8;animation:pulse 2.4s infinite}
 .callcard{text-align:center;border-color:#2c6a3a!important}.callcard .scene-ic{animation:shake .5s infinite}
-</style><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="theme-color" content="#120a0a"></head><body>
+</style><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="theme-color" content="#120a0a"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=IBM+Plex+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+</head><body>
 <div class="scrim-red" id="scrim"></div><div id="notif"></div><div id="app"></div><div id="side" style="display:none;padding:14px 14px 90px"></div>
 <div class="navbar" id="nav" style="display:none">
 <button data-tab="game" class="on"><span class="ic">🩸</span>คืนนี้</button>
@@ -1089,7 +1159,7 @@ K("ch_wire","*","ที่นี่แคบพอดี ทางเข้า�
 const VER=2, SKEY="overtime.save.v2", MKEY="overtime.meta.v1";
 const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
 const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
-const META_DEF=()=>({v:VER,runs:0,endings:{},kills:0,saved:0,betrayed:0,worldGhosts:[],scars:[],year:13,recent:[],best:null,arrived:0,pts:0,perks:{},stash:[],legacy:null,dn:null,cal:null,dq:null,wkDone:{},ach:{},st:{},title:null,theme:null,themeOn:0,sureUp:0,instNo:0});
+const META_DEF=()=>({v:VER,runs:0,endings:{},kills:0,saved:0,betrayed:0,worldGhosts:[],scars:[],year:13,recent:[],best:null,arrived:0,pts:0,perks:{},stash:[],legacy:null,bestKm:0,seenIntro:0,dn:null,cal:null,dq:null,wkDone:{},ach:{},st:{},title:null,theme:null,themeOn:0,sureUp:0,instNo:0});
 function migrateMeta(m){
  if(!m) return META_DEF();
  const d=META_DEF(); for(const k in d) if(m[k]===undefined) m[k]=d[k];
@@ -1227,6 +1297,8 @@ function checkOtAch(g,ex){let n=0;for(const [id,i,t,d,f] of OTACH){if(META.ach[i
 
 /* --- รวมทุกอย่างตอนจบคืน --- */
 function retEnd(){const g=G,ex=g.ending.extra;META.st=META.st||{};
+ if(g.flags.ms&&g.flags.ms.length){const p=g.flags.ms.length*3;META.pts+=p;ex.push(`🛣️ ผ่านหลักระยะทาง ${g.flags.ms.length}/3 +${p} แต้ม`)}
+ if(g.mode==="run"&&g.map){const km=Math.max(0,Math.round(g.map.km-kmLeft()));g.ending.km=km;g.ending.bestPrev=META.bestKm||0;if(km>(META.bestKm||0))META.bestKm=km}
  if(g.wkr!=null)ex.push("🔮 กฎประจำสัปดาห์: แต้มรอด ×2");
  if(g.dn){const D=dnInfo();const km=g.map&&g.mode==="run"?Math.max(0,Math.round(g.map.km-kmLeft())):0;const b=10+Math.round(km/5)+(g.ending.arrived?25:0);
   META.pts+=b;D.date=g.dn;D.played=1;D.res={km,arrived:g.ending.arrived,alive:g.ending.alive,txt:g.ending.arrived?"ถึงบ้าน":g.ending.alive?`รอด · ไป ${km} กม.`:`ไป ${km} กม.`};
@@ -1278,6 +1350,192 @@ function installH(){if(META.runs<3||META.instNo||isStandalone())return "";
  return ""}
 async function doInstall(){if(!instEv)return;instEv.prompt();try{const r=await instEv.userChoice;if(r&&r.outcome==="accepted"){META.instNo=1;saveMeta();track("/installed")}}catch(e){}instEv=null;renderTitle()}
 applyTheme();
+
+/* ================= FUN FIXES: ทุกคืนต้องมีทางชนะ · มาตรวัดทันไหม · หลักระยะทาง · คำใบ้จากคนรอ · สรุปตอนจบ ================= */
+// P1: ระยะทางตามพาหนะตอนเริ่ม (โหมดกลับบ้าน ไม่ใช่คนเดิมจากปีที่แล้ว)
+function fairKm(km){if(!G||G.mode!=="run"||G.legacy)return km;const sp=VEHS[G.veh].sp;
+ if(sp<=5)return Math.min(km,ri(35,60));if(sp<=14)return Math.min(km,ri(45,80));return km}
+const KEYCAR_TXT=[
+ "รถมอเตอร์ไซค์ล้มตะแคงอยู่ข้างเสาไฟ เครื่องยังอุ่น กุญแจเสียบคาอยู่ เจ้าของนอนคว่ำอยู่ห่างไปสองเมตร ไม่ขยับ",
+ "เก๋งสีเทาจอดดับเครื่องกลางถนน ประตูคนขับเปิดค้าง กุญแจห้อยอยู่ที่สวิตช์ บนเบาะมีกระเป๋าเงินกับรอยเลือดแห้ง",
+ "ในลานจอดหลังร้านสะดวกซื้อ มีมอเตอร์ไซค์ส่งของจอดอยู่ กุญแจยังเสียบอยู่ กล่องอาหารร่วงกระจายเต็มพื้น คนขับหายไปไหนไม่รู้"];
+function funArrive(){if(G.mode!=="run")return false;
+ // P5: หลักระยะทาง 25/50/75%
+ const pc=(1-kmLeft()/G.map.km)*100;G.flags.ms=G.flags.ms||[];
+ for(const [t,txt] of [[25,"มาได้หนึ่งในสี่ของทางแล้ว"],[50,"ครึ่งทางแล้ว ถอยกลับก็ไกลพอๆ กับไปต่อ"],[75,"เหลือไม่ถึงหนึ่งในสี่ เริ่มจำชื่อถนนแถวบ้านได้"]])
+  if(pc>=t&&!G.flags.ms.includes(t)){G.flags.ms.push(t);carry(`🛣️ ${txt}`,`อีก ${kmLeft()} กม.`)}
+ // P3: คำใบ้จากคนรอ เฉพาะ 3 คืนแรก
+ waiterHint();
+ // P1: คนที่ยังเดินเท้าอยู่ เจอรถที่ใช้ได้แน่นอน 1 ครั้งในสองที่แรก
+ const n=node();if(!G.flags.keyCar&&VEHS[G.veh].sp<=5&&n.l>=1&&n.l<=2){G.flags.keyCar=1;
+  const v=G.flags.keyCarV||pick(["มอไซค์","เก๋ง","มอไซค์"]);const i=v==="เก๋ง"?1:pick([0,2]);
+  show({ic:v==="เก๋ง"?"🚗":"🏍️",loc:place(n).n,text:KEYCAR_TXT[i],flash:false,k:"keycar",choices:[
+   {l:`เอา${v}ไป`,primary:true,sub:"ใช้เวลาไม่กี่นาที แต่เสียงเครื่องอาจเรียกคนมา",go:()=>{passTime(5);G.noise=clamp(G.noise+2,0,10);const r=takeVeh(v,ri(30,48));addLog(r||"ได้"+v,"good");carry("🔑 ได้รถแล้ว","บ้านยังอยู่อีก "+kmLeft()+" กม. แต่อย่างน้อยก็ไม่ต้องเดินแล้ว");flow()}},
+   {l:"ไม่ยุ่ง เดินต่อ",sub:"รถคันนี้อาจมีเจ้าของรออยู่ใกล้ๆ",go:()=>flow()}]});return true}
+ return false}
+// P2: มาตรวัดทันไหม (คำพูด ไม่ใช่ %)
+function paceInfo(left,tleft){const V=VEHS[G.veh];let need;
+ if(V.fuel){const range=G.fuel/V.fuel;need=range>=left?left/V.sp*60:range/V.sp*60+(left-range)/5*60}else need=left/V.sp*60;
+ need*=1.45;const r=tleft>0?need/tleft:9;
+ let why="";if(r>1.1){if(V.sp<=5)why="เดินไม่ทันแน่ ต้องหารถ";else if(V.fuel&&G.fuel/V.fuel<left)why="น้ำมันไม่พอถึงบ้าน ต้องเติม";else why="ต้องเร่ง อย่าแวะเยอะ"}
+ return {r,why,label:r<=.75?"✅ น่าจะทัน":r<=1.1?"⚠️ ลุ้น":"❌ ไม่ทันถ้ายังไปแบบนี้"}}
+function paceH(left,tleft){if(left<=0)return "";const p=paceInfo(left,tleft);G._pace=p.r;
+ return `<div class="small" style="margin:-2px 0 6px;color:${p.r<=.75?"var(--green)":p.r<=1.1?"var(--amber)":"var(--red)"}">${p.label}${p.why?" · "+p.why:""}</div>`}
+// P3: ข้อความจากคนรอ ช่วยสอน 3 คืนแรก (เขียนแยกตามแบบคนรอ)
+const WHINT={
+ walk:{y:"พี่ยังเดินอยู่อีกเหรอ ไกลขนาดนี้เดินไม่ทันเช้าหรอก หารถเถอะ ขอร้อง",e:"ลูก เดินแบบนี้ไม่ทันเช้าหรอกนะ หารถให้ได้ อย่าห่วงว่ารถใคร",p:"มึงยังเดินอยู่อีกเหรอ หารถดิ เดินไม่ทันแน่ๆ"},
+ tired:{y:"ถ้าเหนื่อยก็หาที่ซ่อนพักก่อนนะ ไม่ต้องรีบจนล้ม",e:"เหนื่อยก็พักก่อน หาที่มิดชิดนั่งพัก กินอะไรหน่อย แม่รอได้",p:"เหนื่อยก็พักก่อนเว้ย หาที่ซ่อนดีๆ อย่าฝืน"},
+ hurt:{y:"พี่เจ็บรึเปล่า ถ้าไม่ไหวอย่าไปสู้กับใครนะ หนีได้ก็หนี",e:"ถ้าเจ็บอย่าไปมีเรื่องกับใคร หลบได้ก็หลบ ทำแผลก่อน",p:"เจ็บก็อย่าไปมีเรื่อง หนีได้หนี ทำแผลด้วย"},
+ late:{y:"ตีสองแล้ว พี่อยู่ไหนแล้ว รีบหน่อยได้ไหม",e:"ตีสองแล้วลูก อย่าแวะที่ไหนนาน ตรงกลับมาเลย",p:"ตีสองละ อย่าแวะเยอะ ตรงกลับมาเลย"}};
+function waiterHint(){if(!(G.nb>0||META.runs<=3)||G.phoneBat<=0||!G.w)return;G.flags.wh=G.flags.wh||{};const a=G.w.arch in WHINT.walk?G.w.arch:"y";
+ const send=k=>{G.flags.wh[k]=1;pushChat("them",WHINT[k][a],true)};
+ if(!G.flags.wh.walk&&G.min>=60&&VEHS[G.veh].sp<=5&&kmLeft()>25)return send("walk");
+ if(!G.flags.wh.tired&&G.stamina<30)return send("tired");
+ if(!G.flags.wh.hurt&&G.hp<G.hpMax*.4)return send("hurt");
+ if(!G.flags.wh.late&&G.min>=420&&(G._pace||0)>1)return send("late")}
+// P4: สรุปว่าคืนนี้พลาดตรงไหน + สถิติไกลสุด
+function recapH(){const g=G,e=g.ending;if(g.mode!=="run")return "";const tips=[];const f=g.flags;
+ if(!e.alive&&g._foe)tips.push("ล้มเพราะการปะทะ ครั้งหน้าลองหลบ หนี หรือหาอาวุธก่อนเข้าที่อันตราย");
+ if(!e.arrived&&e.alive&&(f.kmWalk||0)>(f.kmAll||1)*.6)tips.push(`เดินเท้าไป ${f.kmWalk} กม. จากทั้งหมด ${f.kmAll} กม. ระยะทางขนาดนี้ต้องหารถ ลองต่อสายรถ ใช้เรือ หรือขอติดรถคนอื่น`);
+ if(!e.arrived&&f.ranDry)tips.push("น้ำมันหมดกลางทาง ครั้งหน้าลองดูดน้ำมันจากรถที่จอดทิ้งไว้ หรือพกแกลลอน");
+ if(!e.arrived&&(f.tSearch||0)>=120)tips.push(`ใช้เวลาค้นของไป ${Math.round(f.tSearch/60*10)/10} ชม. ค้นเฉพาะตอนที่ขาดของจริงๆ`);
+ if(!e.arrived&&(f.tHide||0)>=90)tips.push(`ซ่อนตัวไป ${Math.round(f.tHide/60*10)/10} ชม. ปลอดภัยก็จริง แต่เวลาหายไปด้วย`);
+ const best=e.km!=null?`<div class="kv"><span>ไปได้</span><b>${e.km} กม.${e.km>(e.bestPrev||0)&&e.bestPrev>0?" • 🏅 สถิติใหม่!":""}</b></div><div class="kv"><span>ไกลที่สุดของคุณ</span><b>${META.bestKm} กม.</b></div>`:"";
+ if(!tips.length&&!best)return "";
+ return `<div class="panel">${best}${tips.length?`<div class="small" style="margin-top:6px;color:var(--ink)"><b>คืนนี้พลาดตรงไหน</b><br>${tips.slice(0,2).map(t=>"• "+t).join("<br>")}</div>`:""}</div>`}
+
+/* ================= VISUAL v3: pixel art ================= */
+const PAL=[[10,6,7],[42,26,30],[74,64,70],[122,31,43],[176,40,58],[255,59,92],[160,110,40],[255,176,57],[234,223,205],[180,170,165],[138,148,166],[40,90,60],[79,215,122],[40,70,120],[79,176,255]];
+function nearPal(r,g,b){let bi=0,bd=1e9;for(let i=0;i<PAL.length;i++){const p=PAL[i],d=(r-p[0])**2*.3+(g-p[1])**2*.59+(b-p[2])**2*.11;if(d<bd){bd=d;bi=i}}return PAL[bi]}
+function outline(c,W,H){const x=c.getContext("2d"),im=x.getImageData(0,0,W,H),d=im.data,a=i=>d[i*4+3]>110,o=new Uint8Array(W*H);
+ for(let y=0;y<H;y++)for(let X=0;X<W;X++){const i=y*W+X;if(a(i))continue;if((X>0&&a(i-1))||(X<W-1&&a(i+1))||(y>0&&a(i-W))||(y<H-1&&a(i+W)))o[i]=1}
+ for(let i=0;i<W*H;i++)if(o[i]){d[i*4]=4;d[i*4+1]=2;d[i*4+2]=3;d[i*4+3]=255}x.putImageData(im,0,0)}
+const _pxc={};
+function pxEmoji(e,n){n=n||18;const k=e+n;if(_pxc[k])return _pxc[k];const W=n+2,c=document.createElement("canvas");c.width=W;c.height=W;const x=c.getContext("2d");
+ x.textAlign="center";x.textBaseline="middle";x.font=`${n-2}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;x.fillText(e,W/2,W/2+1);
+ const im=x.getImageData(0,0,W,W),d=im.data;let any=0;for(let i=0;i<d.length;i+=4){if(d[i+3]<110){d[i+3]=0;continue}any=1;const p=nearPal(d[i],d[i+1],d[i+2]);d[i]=p[0];d[i+1]=p[1];d[i+2]=p[2];d[i+3]=255}
+ x.putImageData(im,0,0);if(!any)return _pxc[k]=null;outline(c,W,W);return _pxc[k]=c.toDataURL()}
+function gridImg(rows,cols){const H=rows.length,W=rows[0].length,c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");
+ rows.forEach((r,y)=>[...r].forEach((ch,X)=>{if(ch!=="."&&cols[ch]){x.fillStyle=cols[ch];x.fillRect(X,y,1,1)}}));return c.toDataURL()}
+const HEART=[".KK.KK.","KRRKRRK","KRWRRRK","KRRRRRK",".KRRRK.","..KRK..","...K..."];
+const PX_HEART=gridImg(HEART,{K:"#0a0607",R:"#ff3b5c",W:"#ffd1d8"}),PX_HEART0=gridImg(HEART,{K:"#0a0607",R:"#2a1a1e",W:"#3a2228"});
+function heartsH(full){let h="";for(let i=0;i<5;i++)h+=`<img class="phrt" src="${i<full?PX_HEART:PX_HEART0}" alt="${i<full?"❤️":"🖤"}">`;return h}
+// ภาพพิกเซลตัวละคร 16x16 สุ่มจากตัวละครในรอบนี้
+const _ptc={};
+function portrait(g){if(!g)return "";const key=(g.rid||0)+":"+g.gender+":"+g.age;if(_ptc[key])return _ptc[key];
+ let h=2166136261;for(const ch of key)h=Math.imul(h^ch.charCodeAt(0),16777619);const r=()=>{h=(Math.imul(h,1103515245)+12345)>>>0;return h/4294967296};
+ const SK=["#f1c9a5","#d9a57c","#b07a52","#7d5236"][Math.floor(r()*4)],HR=g.age>=55?"#b9b4ad":["#1a1112","#2b1a12","#4a2e1c","#0e0b0c"][Math.floor(r()*4)],
+  SH=["#7a1f2b","#2f3b52","#3d3d3d","#5a4a2a","#1f4a3a"][Math.floor(r()*5)],f=g.gender==="f";
+ const c=document.createElement("canvas");c.width=16;c.height=16;const x=c.getContext("2d"),P=(X,Y,w,hh,col)=>{x.fillStyle=col;x.fillRect(X,Y,w,hh)};
+ P(3,12,10,4,SH);P(2,13,12,3,SH);P(6,10,4,3,SK);P(4,3,8,8,SK);P(5,11,6,1,SK);
+ P(4,2,8,2,HR);P(3,3,1,f?8:3,HR);P(12,3,1,f?8:3,HR);if(f){P(3,10,2,3,HR);P(11,10,2,3,HR)}else if(r()<.5)P(4,4,2,1,HR);
+ P(5,6,2,1,"#0a0607");P(9,6,2,1,"#0a0607");if(r()<.3){P(5,6,1,1,"#ff3b5c");P(10,6,1,1,"#ff3b5c")}
+ P(7,9,2,1,g.age>=55?"#6b4a3a":"#8a3a3a");if(g.age>=45&&!f)P(5,8,6,1,"rgba(0,0,0,.18)");P(7,12,2,2,"#eadfcd");
+ outline(c,16,16);return _ptc[key]=c.toDataURL()}
+// แปลง emoji ไอคอนฉาก/ปุ่มให้เป็นภาพพิกเซลโทนเดียวกันทั้งเกม (ทำงานอัตโนมัติทุกครั้งที่หน้าจอเปลี่ยน)
+const EMO=/\p{Extended_Pictographic}/u;
+function pixelize(root){root.querySelectorAll(".scene-ic:not([data-px]),.tic:not([data-px])").forEach(el=>{el.dataset.px=1;const t=el.textContent.trim();if(!t||!EMO.test(t)||el.querySelector("img"))return;
+ const u=pxEmoji(t,el.classList.contains("tic")?16:20);if(u)el.innerHTML=`<img class="pxi" src="${u}" alt="${t}">`})}
+let _pxq=0;new MutationObserver(()=>{if(_pxq)return;_pxq=requestAnimationFrame(()=>{_pxq=0;pixelize(app);const sk=document.getElementById("sky");if(sk&&!sk.dataset.run){sk.dataset.run=1;runSky()}})}).observe(app,{childList:true,subtree:true});
+
+/* --- ฉากเมืองพิกเซล (ใช้ทั้งหน้าแรกและฉากเปิด) --- */
+function cityModel(seed){let h=seed>>>0;const r=()=>{h=(Math.imul(h,1103515245)+12345)>>>0;return h/4294967296};const B=[];let X=-2;
+ while(X<200){const w=8+Math.floor(r()*16),hh=22+Math.floor(r()*52),win=[];for(let y=4;y<hh-3;y+=4)for(let x=2;x<w-2;x+=3)win.push([x,y,r()<.45,r()]);B.push({x:X,w,h:hh,win,tone:r()});X+=w+Math.floor(r()*3)}
+ const stars=[];for(let i=0;i<40;i++)stars.push([Math.floor(r()*192),Math.floor(r()*50),r()]);return {B,stars,tower:60+Math.floor(r()*70)}}
+const _city=cityModel(1907);
+function drawCity(x,t,o){o=o||{};const W=192,H=108,C=_city;
+ const sky=o.siren?["#12060a","#1c0910","#2a0d16"]:["#05030a","#0b0714","#140c1c"];for(let i=0;i<3;i++){x.fillStyle=sky[i];x.fillRect(0,i*24,W,24)}x.fillStyle=sky[2];x.fillRect(0,72,W,36);
+ for(const [sx,sy,ph] of C.stars){if(Math.sin(t*2+ph*9)>.2){x.fillStyle="#6b5a6e";x.fillRect(sx,sy,1,1)}}
+ x.fillStyle="#d8cfc0";x.fillRect(159,13,5,1);x.fillRect(158,14,7,5);x.fillRect(159,19,5,1);x.fillStyle=sky[0];x.fillRect(161,13,4,1);x.fillRect(162,14,4,5);x.fillRect(161,19,4,1);
+ const tw=C.tower;x.fillStyle="#0a0608";x.fillRect(tw,18,3,90);x.fillRect(tw-2,30,7,2);
+ if(Math.floor(t*2)%2===0){x.fillStyle="#ff3b5c";x.fillRect(tw,16,3,2)}
+ if(o.siren){const a=t*2.4;x.save();x.globalAlpha=.16;x.fillStyle="#ff3b5c";x.beginPath();x.moveTo(tw+1,17);x.lineTo(tw+1+Math.cos(a)*240,17+Math.sin(a)*24);x.lineTo(tw+1+Math.cos(a+.45)*240,17+Math.sin(a+.45)*24);x.closePath();x.fill();x.restore()}
+ const off=o.dark||0;
+ for(const b of C.B){const by=H-b.h;x.fillStyle=b.tone<.5?"#0d0809":"#120b0d";x.fillRect(b.x,by,b.w,b.h);x.fillStyle="#1d1215";x.fillRect(b.x,by,b.w,1);
+  for(const [wx,wy,on,ph] of b.win){if(!on||ph<off)continue;const fl=Math.sin(t*3+ph*40)>.97;x.fillStyle=fl?"#3a2a20":(ph<.15?"#ff3b5c":ph<.6?"#ffb039":"#c9b48a");x.globalAlpha=.85;x.fillRect(b.x+wx,by+wy,1,2);x.globalAlpha=1}}
+ if(o.fire){for(let i=0;i<14;i++){const fx=(i*37)%192,fy=H-10-((t*20+i*13)%22);x.fillStyle=i%3?"#ff8a2a":"#ff3b5c";x.globalAlpha=.6;x.fillRect(fx,fy,2,2);x.globalAlpha=1}}
+ if(o.rain){x.fillStyle="rgba(150,160,190,.35)";for(let i=0;i<60;i++){const rx=(i*53+Math.floor(t*90))%200-4,ry=(i*29+Math.floor(t*160))%112;x.fillRect(rx,ry,1,3)}}
+ x.fillStyle="#070405";x.fillRect(0,H-3,W,3)}
+function skylineH(){return `<canvas class="skyline" id="sky" width="192" height="72"></canvas>`}
+let _skyRaf=0;function runSky(){cancelAnimationFrame(_skyRaf);const cv=document.getElementById("sky");if(!cv)return;const x=cv.getContext("2d"),t0=performance.now();
+ const loop=n=>{if(!document.body.contains(cv))return;const t=(n-t0)/1000;x.save();x.translate(0,-36);drawCity(x,t,{siren:Math.floor(t/6)%2===1,rain:true});x.restore();_skyRaf=requestAnimationFrame(loop)};_skyRaf=requestAnimationFrame(loop)}
+function tickerH(){const lines=["19:00 ไซเรนจะดังทั่วประเทศ กฎหมายทุกข้อจะหายไป 12 ชั่วโมง","ทางด่วนทุกสายปิดตั้งแต่ 18:30","โรงพยาบาลรัฐงดรับผู้ป่วยจนถึง 07:00",
+  `กฎปีนี้ประจำสัปดาห์: ${wkRule().t}`,"อย่าเปิดประตูให้ใคร แม้จะเป็นเสียงคนที่คุณรู้จัก","ร้านสะดวกซื้อทุกสาขาปิดก่อนไซเรน 15 นาที","สัญญาณมือถืออาจถูกตัดเป็นช่วงๆ"];
+ return `<div class="ticker"><b>📡 ด่วน</b><span>${lines.join("  ◆  ")}</span></div>`}
+
+/* --- ฉากเปิด --- */
+const INTRO=[
+ {cap:"ปีละหนึ่งคืน รัฐบาลประกาศ <em>“คืนไร้กฎ”</em>",d:(x,t)=>drawCity(x,t,{rain:true})},
+ {cap:"<em>19:00</em> ไซเรนดังทั่วเมือง กฎหมายทุกข้อหายไป 12 ชั่วโมง",d:(x,t)=>drawCity(x,t,{siren:true,dark:Math.min(.9,t*.12)})},
+ {cap:"แต่คืนนี้ คุณยังติดอยู่ที่ทำงาน",d:(x,t)=>introOffice(x,t)},
+ {cap:"มีคนรออยู่ที่บ้าน และเขาส่งข้อความมาว่า <em>“กลับมาให้ทันนะ”</em>",d:(x,t)=>introPhone(x,t)},
+ {cap:"บ้านอยู่ห่างออกไปหลายสิบกิโล กลับไปให้ถึง <em>ก่อน 07:00</em>",d:(x,t)=>introRoad(x,t)}];
+function introOffice(x,t){x.fillStyle="#08050a";x.fillRect(0,0,192,108);x.save();x.beginPath();x.rect(20,10,110,62);x.clip();drawCity(x,t,{siren:true,dark:.5});x.restore();
+ x.fillStyle="#1a1216";x.fillRect(18,8,114,3);x.fillRect(18,72,114,3);x.fillRect(18,8,3,67);x.fillRect(129,8,3,67);x.fillRect(73,8,2,67);
+ x.fillStyle="#120c0e";x.fillRect(0,80,192,28);x.fillStyle="#1d1417";x.fillRect(110,74,70,6);
+ const g=.6+.4*Math.sin(t*9)*(Math.sin(t*1.3)>.6?1:0);x.fillStyle=`rgba(120,180,255,${.15+.1*g})`;x.fillRect(122,52,40,24);x.fillStyle="#2b3550";x.fillRect(128,56,28,16);x.fillStyle="#9ec6ff";x.fillRect(129,57,26,14);
+ x.fillStyle="#050304";x.fillRect(140,58,14,22);x.fillRect(143,50,8,9);x.fillRect(136,64,4,10);
+ x.fillStyle="#d8cfc0";x.fillRect(160,14,16,16);x.fillStyle="#0a0608";x.fillRect(161,15,14,14);x.fillStyle="#ff3b5c";x.fillRect(168,16,1,6);x.fillRect(168,22,5,1)}
+function introPhone(x,t){x.fillStyle="#060407";x.fillRect(0,0,192,108);x.fillStyle="#1a1216";x.fillRect(70,6,52,100);x.fillStyle="#0c1622";x.fillRect(73,12,46,88);
+ x.fillStyle="#e8e2d8";x.fillRect(78,20,30,8);x.fillStyle="#2a3550";for(let i=0;i<3;i++)x.fillRect(80,22+i*0,20,1);
+ if(t>.6){x.fillStyle="#ff3b5c";x.fillRect(84,36,30,12);x.fillStyle="#ffd1d8";x.fillRect(87,40,20,1);x.fillRect(87,43,14,1)}
+ if(t>1.4){x.fillStyle="#e8e2d8";x.fillRect(78,54,24,8);x.fillStyle="#2a3550";x.fillRect(81,57,16,1)}
+ if(t>2.1&&Math.floor(t*3)%2){x.fillStyle="#ff3b5c";x.fillRect(78,68,3,3);x.fillRect(84,68,3,3);x.fillRect(90,68,3,3)}
+ x.fillStyle="#2a1810";x.fillRect(60,80,20,28);x.fillRect(112,84,18,24)}
+function introRoad(x,t){x.fillStyle="#05030a";x.fillRect(0,0,192,50);x.save();x.translate(0,-30);drawCity(x,t,{fire:true,dark:.7});x.restore();x.fillStyle="#0c0809";x.fillRect(0,50,192,58);
+ x.fillStyle="#141012";x.beginPath();x.moveTo(84,50);x.lineTo(108,50);x.lineTo(170,108);x.lineTo(22,108);x.closePath();x.fill();
+ for(let i=0;i<6;i++){const p=((t*.6+i/6)%1),y=50+p*p*58,w=1+p*4,hh=1+p*6;x.fillStyle="#ffb039";x.fillRect(96-w/2,y,w,hh)}
+ x.fillStyle="#1f5a3a";x.fillRect(140,44,28,14);x.fillStyle="#eadfcd";x.fillRect(142,46,24,1);x.fillRect(142,52,10,1);x.fillStyle="#555";x.fillRect(153,58,2,14);
+ x.fillStyle="#050304";x.fillRect(92,90,6,14);x.fillRect(93,85,4,5)}
+setTimeout(()=>{try{if(!META.seenIntro&&!G&&!load(SKEY,null))playIntro()}catch(e){}},400);
+
+/* ================= CLARITY: ต้องทำตอนนี้ · ปุ่มแนะนำ · แนวโน้ม · รูปคนอื่น · ฉากคั่นเวลา ================= */
+// C1: เป้าหมายตอนนี้ เรียงตามความเร่งด่วน (k = ใช้หาปุ่มที่ควรกด)
+function todoList(){if(!G||G.mode!=="run"||G.over)return [];const t=[],V=VEHS[G.veh],left=kmLeft();
+ if(G.bleed)t.push({p:100,k:"heal",x:"🩸 เลือดไหลอยู่ ทำแผลก่อน"});
+ else if(G.hp<G.hpMax*.35)t.push({p:90,k:"heal",x:"❤️ เลือดเหลือน้อย ทำแผล/กินยา หรือเลี่ยงการปะทะ"});
+ if(G.min>=0&&V.sp<=5&&left>25)t.push({p:80,k:"car",x:"🚗 หารถให้ได้ เดินไม่ทันแน่"});
+ if(V.fuel&&G.fuel/V.fuel<left&&G.fuel<35)t.push({p:70,k:"fuel",x:`⛽ น้ำมันไม่พอถึงบ้าน (${Math.round(G.fuel)}) หาที่เติม/ดูด`});
+ if(G.stamina<25)t.push({p:65,k:"rest",x:"😮‍💨 แรงจะหมด หาที่ซ่อนแล้วพัก"});
+ if(G.sanity<30)t.push({p:55,k:"rest",x:"😵 สติจะหลุด พักหรือคุยกับคนที่บ้าน"});
+ if((G.unread||0)>0&&G.phoneBat>0)t.push({p:50,k:"chat",x:`💬 ${G.w.rel}ส่งข้อความมา ${G.unread} ข้อความ`});
+ if(G.phoneBat>0&&G.phoneBat<=15)t.push({p:40,k:"bat",x:"🪫 แบตใกล้หมด ประหยัดหรือหาที่ชาร์จ"});
+ if((G._pace||0)>1.1&&G.min>=300)t.push({p:45,k:"go",x:"⏰ ช้ากว่ากำหนด ลดการแวะ มุ่งหน้าต่อ"});
+ t.push({p:1,k:"go",x:`🏠 มุ่งหน้าต่อ อีก ${left} กม.`});
+ return t.sort((a,b)=>b.p-a.p).slice(0,2)}
+function todoH(){const t=todoList();if(!t.length)return "";return `<div class="todo">${t.map((o,i)=>`<span class="${i?"":"t1"}">${i?"":"▶ "}${o.x}</span>`).join("")}</div>`}
+const SUGG={heal:/ทำแผล|พันแผล|ห้ามเลือด|ยา|ปฐมพยาบาล|รักษา/,car:/ต่อสายรถ|ต่อสาย|รถ|ลานจอด|มอไซค์|เก๋ง|กระบะ|เรือ|ติดรถ/,fuel:/น้ำมัน|ดูด|ปั๊ม|แกลลอน/,rest:/พัก|ซ่อน|นอน|หลบ/,bat:/ชาร์จ|แบต|ปลั๊ก/};
+function suggestBtn(){const t=todoList()[0];if(!t)return;const btns=[...document.querySelectorAll("#ch .btn")].filter(b=>!b.disabled);if(!btns.length)return;let b=null;
+ if(SUGG[t.k])b=btns.find(x=>SUGG[t.k].test(x.textContent));
+ if(!b&&t.k==="go"&&!G.flags.noSuggestGo){const r=btns.filter(x=>x.classList.contains("route"));if(r.length)b=r.reduce((m,x)=>{const k=+((x.textContent.match(/(\d+)\s*กม/)||[])[1]||99);return !m||k<m.k?{x,k}:m},null).x}
+ if(b)b.classList.add("suggest")}
+// C2: แนวโน้มน้ำมัน/แบต ต่อชั่วโมง
+function fuelRate(){const V=VEHS[G.veh];return V.fuel?Math.round(V.fuel*V.sp*.55):0}
+// C3: รูปคนอื่น (คนรอ เพื่อนร่วมทาง คนรัก)
+function guessG(t){return /สาว|แม่|ยาย|ภรรยา|เมีย|ป้า|น้า|พี่สาว|ลูกสาว|หลานสาว|หญิง|นาง/.test(t||"")?"f":"m"}
+function guessAge(t){return /ลูก|หลาน|น้อง/.test(t||"")?14:/แม่|พ่อ|ยาย|ตา|ปู่|ย่า|ลุง|ป้า/.test(t||"")?66:34}
+function npcPortrait(name,rel){return portrait({rid:"npc:"+name+":"+(rel||""),gender:guessG((rel||"")+name),age:guessAge(rel)})}
+function compsMini(){if(!G||!G.comps||!G.comps.length)return "";return G.comps.filter(c=>!c.dog&&!c.dead).slice(0,3).map(c=>`<img class="mini" title="${c.name}" src="${npcPortrait(c.name,c.rel||"")}">`).join("")+(G.partner&&!G.flags.partnerDied?`<img class="mini" title="${G.partner.name||"คนรัก"}" style="border-color:#ff7a9a" src="${npcPortrait(G.partner.name||"partner",G.gender==="m"?"หญิง":"ชาย")}">`:"")}
+// C4: ฉากคั่นเวลา เที่ยงคืน / ตีสาม / ใกล้รุ่ง
+const INTER=[{m:300,id:"mid",h:"00:00",t:"เที่ยงคืน ไฟตามตึกดับไปครึ่งเมือง",o:{dark:.55,fire:true}},
+ {m:480,id:"hell",h:"03:00",t:"ชั่วโมงนรก คนที่ยังออกล่าตอนนี้ คือคนที่ตั้งใจจะฆ่า",o:{siren:true,dark:.8,fire:true}},
+ {m:630,id:"dawn",h:"05:30",t:"ฟ้าเริ่มเปลี่ยนสี อีกไม่นานไซเรนเช้าจะดัง",o:{dawn:true,dark:.9}}];
+function checkInter(prev){if(!G||G.mode==="home"||G.over)return;G.flags.ip=G.flags.ip||{};for(const I of INTER)if(prev<I.m&&G.min>=I.m&&!G.flags.ip[I.id]){G.flags.ip[I.id]=1;setTimeout(()=>playInter(I),60);break}}
+function playInter(I){if(document.getElementById("inter"))return;const el=document.createElement("div");el.id="inter";
+ el.innerHTML=`<div class="ih">● ${I.h} · ${place(node()).n}</div><canvas width="192" height="108"></canvas><div class="it">${I.t}</div><div class="is">แตะเพื่อไปต่อ · อีก ${kmLeft()} กม.</div>`;document.body.appendChild(el);
+ const x=el.querySelector("canvas").getContext("2d"),t0=performance.now();let raf=0,done=false;
+ const loop=n=>{const t=(n-t0)/1000;if(I.o.dawn){drawCity(x,t,{dark:.9});const g=x.createLinearGradient(0,0,0,70);g.addColorStop(0,"rgba(255,140,80,.0)");g.addColorStop(1,`rgba(255,140,80,${Math.min(.35,t*.12)})`);x.fillStyle=g;x.fillRect(0,0,192,70)}else drawCity(x,t,I.o);raf=requestAnimationFrame(loop)};
+ const end=()=>{if(done)return;done=true;cancelAnimationFrame(raf);el.remove()};el.onclick=end;setTimeout(end,3200);raf=requestAnimationFrame(loop);try{beep(I.id==="hell"?90:220,.25,"sawtooth",.03)}catch(e){}}
+
+function playIntro(done){let i=0,t0=performance.now(),raf=0,typ=0;const el=document.createElement("div");el.id="intro";
+ el.innerHTML=`<canvas width="192" height="108"></canvas><div class="cap"></div><div class="bar"><button id="isk">ข้าม</button><span id="ipg"></span><button id="inx">ถัดไป ▸</button></div>`;document.body.appendChild(el);
+ const cv=el.querySelector("canvas"),x=cv.getContext("2d"),cap=el.querySelector(".cap");
+ const setCap=()=>{clearInterval(typ);const full=INTRO[i].cap;let n=0;const plain=full.replace(/<[^>]+>/g,"");typ=setInterval(()=>{n++;cap.innerHTML=n>=plain.length?full:plain.slice(0,n);if(n>=plain.length)clearInterval(typ)},28);el.querySelector("#ipg").textContent=(i+1)+" / "+INTRO.length};
+ const end=()=>{cancelAnimationFrame(raf);clearInterval(typ);document.removeEventListener("keydown",key);el.remove();META.seenIntro=1;saveMeta();done&&done()};
+ const next=()=>{i++;if(i>=INTRO.length)return end();t0=performance.now();setCap();try{beep(180+i*40,.06,"square",.03)}catch(e){}};
+ const key=e=>{if(e.key==="Escape")end();else if(e.key==="Enter"||e.key===" ")next()};document.addEventListener("keydown",key);
+ el.querySelector("#isk").onclick=end;el.querySelector("#inx").onclick=next;cv.onclick=next;
+ const loop=n=>{const t=(n-t0)/1000;INTRO[i].d(x,t);raf=requestAnimationFrame(loop)};setCap();raf=requestAnimationFrame(loop)}
 
 function saveRun(){ if(G&&!G.over) save(G.dn?SKEY_D:SKEY,G); }
 function saveMeta(){ save(MKEY,META); }
@@ -1358,7 +1616,7 @@ function travelInfo(x){ // x:{e,to}
 
 //========================= WORLD TICK =========================
 function passTime(min){
- G.min+=min; G.acc=(G.acc||0)+min;
+ const _pm=G.min; G.min+=min; try{checkInter(_pm)}catch(e){} G.acc=(G.acc||0)+min;
  while(G.acc>=30){ G.acc-=30; worldStep(); }
 }
 function worldStep(){
@@ -1453,7 +1711,7 @@ function newRun(gender,noMercy,opt){
  if(L){ G.vet=Math.min(3,L.nights||1); G.hpMax+=G.vet*4; if(L.scars.includes("kidney")) G.hpMax-=25; if(L.scars.includes("leg")) G.legHurt=true; if(L.scars.includes("mind")) G.sanity=80; G.hp=G.hpMax;
   if(L.grudges&&L.grudges.length) G.grudges=L.grudges.map(g=>({who:g.who,deep:g.deep,shown:false})).concat(chance(.5)?G.grudges.slice(0,1):[]); }
  if(HM){ G.hunter.off=true; G.flags.huntMode=true; }
- G.map=genMap(km,startPlace); G.at=0; G.startId=0; G.homeId=G.map.nodes.length-1;
+ G.map=genMap(fairKm(km),startPlace); G.at=0; G.startId=0; G.homeId=G.map.nodes.length-1;
  // gangs
  const mid=G.map.nodes.filter(n=>n.l>0&&n.p!=="home");
  const ng=Math.round(2+G.map.L/2.5)+(G.rule.moreGangs?2:0); G.gangs=[];
@@ -1512,9 +1770,9 @@ function hud(){
  if(G.legHurt) st.push("🦴 ขาเจ็บ"); if(G.armHurt) st.push("✋ มือเจ็บ"); if(G.infection) st.push("🦠 แผลติดเชื้อ"); if(G.noise>=6) st.push("🔊 มีคนได้ยินเรา");
  if(VEHS[G.veh].fuel&&G.fuel<20) st.push("⛽ น้ำมันใกล้หมด"); if(G.phoneBat<=10) st.push(G.phoneBat<=0?"📵 มือถือดับ":"🪫 แบตใกล้หมด"); if(G.drugAddict&&!G.flags.adrenaline) st.push("💉 ลงแดง");
  return `<div class="hud"><div class="hud-top"><span class="clock">🕐 ${hhmm(Math.max(0,G.min))}</span><span class="small">อีก ${Math.floor(tleft/60)} ชม. ${Math.round(tleft%60)} น. ฟ้าสาง</span><span class="night-badge ${ph.cls}">${ph.label}</span></div>
- <div class="road"><div class="road-fill" style="width:${pc}%"></div><span class="road-km">${G.mode==="hunt"?`💰 ${G.bounty} • 🎯 ${G.targets} • ⛺ อีก ${left} กม.`:`🏠 อีก ${left} กม.`}</span></div>
- <div class="hud-row"><span class="hearts">${hs}</span><span class="gear"><span>${vehIc()} ${G.veh}</span><span>${itemIc(G.weapon)} ${G.weapon}${W.gun?` ×${G.ammo}`:""}</span></span></div>
- ${st.length?`<div class="status">${st.map(x=>`<span>${x}</span>`).join("")}</div>`:""}</div>`;
+ <div class="road"><div class="road-fill" style="width:${pc}%"></div><span class="road-km">${G.mode==="hunt"?`💰 ${G.bounty} • 🎯 ${G.targets} • ⛺ อีก ${left} กม.`:`🏠 อีก ${left} กม.`}</span></div>${G.mode==="run"?paceH(left,tleft):""}
+ <div class="hud-row"><span class="hearts"><img class="hudpt" src="${portrait(G)}" alt="">${heartsH(full)}</span><span class="gear">${compsMini()}<span>${vehIc()} ${G.veh}${VEHS[G.veh].fuel?`<span class="trend">⛽${Math.round(G.fuel)} ▼${fuelRate()}/ชม.</span>`:""}</span><span>${itemIc(G.weapon)} ${G.weapon}${W.gun?` ×${G.ammo}`:""}</span></span></div>
+ ${st.length?`<div class="status">${st.map(x=>`<span>${x}</span>`).join("")}</div>`:""}${G.mode==="run"?todoH():""}</div>`;
 }
 let _snap=null;
 function deltaChips(){
@@ -1549,7 +1807,7 @@ function show(o){
   b.onclick=()=>{clearTimer();c.go();}; (box||C).appendChild(b); });
  if(o.flash) buzz(o.flash===2?[60,40,140]:90);
  if(o.timer&&!window.__BOT){ const bar=$("#tbar"); bar.innerHTML='<div class="timer-bar"><i></i></div><div class="small center" id="tsec"></div>'; const t0=Date.now(); let lastS=-1; _tm=setInterval(()=>{ const el=(Date.now()-t0)/1000, p=1-el/o.timer; const i=bar.querySelector("i"); if(i)i.style.width=Math.max(0,p*100)+"%"; const sl=Math.ceil(o.timer-el); if(sl!==lastS){ lastS=sl; const ts=$("#tsec"); if(ts) ts.textContent=`⏳ ตัดสินใจภายใน ${Math.max(0,sl)} วินาที`; if(sl<=5){ beep(62,.1,"sine",.12); buzz(30); } } if(p<=0){clearTimer();o.onTimeout();} },100); }
- updateScrim(); window.scrollTo(0,0);
+ updateScrim(); window.scrollTo(0,0); try{if(G&&G.mode==="run")suggestBtn()}catch(e){}
 }
 function buzz(p){ if(window.__BOT||!SND.on) return; try{ navigator.vibrate&&navigator.vibrate(p); }catch(e){} }
 function notify(who,txt){ if(window.__BOT) return; const n=$("#notif"); if(!n) return; n.innerHTML=`<div class="nt">💬 ${who} • ตอนนี้</div><div class="nb">${txt}</div>`; n.classList.add("on"); buzz([40,60,40]);
@@ -1683,7 +1941,7 @@ function helpScreen(){
  show({loc:"❓ วิธีเล่น",log:false,delta:false,k:"help",text:"🎯 เป้าหมายเดียว: ไปให้ถึง 🏠 ก่อน 07:00 แบบยังมีชีวิต\n\n🚶 แต่ละที่มีหลายจุดให้เดินสำรวจ เช่น ชั้นบน ดาดฟ้า ลานจอดรถ ตรอกหลังร้าน แต่ละจุดมีของ มีคน มีอันตรายต่างกัน\n🧭 ทางออกไปที่อื่นอยู่คนละจุด ออกทางลานจอดรถไปทางหลวง ออกทางตรอกหลังร้านเข้าซอย ทางลับ 🤫 เงียบกว่าและไม่ต้องผ่านด่าน\n⚡ เจอเหตุการณ์ อ่านแล้วเลือก ตัวเลือกจะเพิ่มขึ้นตามของในกระเป๋า คนที่มาด้วย และอาชีพ ถ้ามีแถบเวลาวิ่ง ต้องรีบเลือก\n\n❤️ หัวใจหมด = ตาย • เจ็บให้ทำแผล\n😮‍💨 เหนื่อยมาก = หนีไม่พ้น • หาที่หลบพัก\n🚗 เดินเท้าไปไม่ทัน ต้องหารถ (ลานจอดรถ ลานขนของ ถนน) หรือต่อสายรถเอง\n💬 แชตด้านล่างคือคนที่รอ ยิ่งไปช้า ที่บ้านยิ่งอันตราย\n🎯 มีคนหนึ่งตามล่าเราทั้งคืน อยู่ที่เดิมนาน มันจะตามทัน",choices:[{l:"← กลับ",primary:true,k:"back",go:nodeMenu}]});
 }
 function aSearch(){
- const n=node(), pl=place(n), sp=curSpot(), st=spState(sp.id); passTime(20); G.noise=clamp(G.noise+1,0,10);
+ const n=node(), pl=place(n), sp=curSpot(), st=spState(sp.id); G.flags.tSearch=(G.flags.tSearch||0)+20;passTime(20); G.noise=clamp(G.noise+1,0,10);
  const risk=clamp(.12+pl.d*.06+(sp.rk||0)+G.noise*.02-sk("sneak")*.04+(phase().k==="hell"?.08:0),.04,.6);
  const tries=1+(sk("scav")>=2?1:0)+((sp.lm||1)>=1.3?1:0), got=[];
  for(let i=0;i<tries;i++){ if(chance(clamp((.5+sk("scav")*.1+(G.inv.includes("ไฟฉาย")?.08:0)-(G.rule.blackout?.12:0))*(sp.lm||1)-(100-st.l)/250,.08,.93))){ const r=rollLoot(); if(r)got.push(r); } }
@@ -1701,7 +1959,7 @@ function aHeal(){
  G.hp=clamp(G.hp+amt,0,G.hpMax); toast("🩹 ทำแผล",t+` (+${Math.round(amt)})`);
 }
 function aHide(){
- passTime(30); G.stamina=clamp(G.stamina+(G.age<=25?40:30),0,100); G.sanity=clamp(G.sanity+4,0,100); G.noise=Math.max(0,G.noise-3-sk("sneak"));
+ G.flags.tHide=(G.flags.tHide||0)+30;passTime(30); G.stamina=clamp(G.stamina+(G.age<=25?40:30),0,100); G.sanity=clamp(G.sanity+4,0,100); G.noise=Math.max(0,G.noise-3-sk("sneak"));
  if(G.inv.includes("ผ้าใบ")) G.noise=Math.max(0,G.noise-2);
  G.hunter.stun+=(sk("sneak")>=2?2:1);
  const i=G.inv.indexOf("อาหารกระป๋อง"); const hs=curSpot().hide; let t=(hs?"มุดเข้าไปหลบ"+hs+" ":"หลบอยู่ในมุมมืด ")+"ฟังเสียงเมืองข้างนอก หัวใจค่อยๆ เต้นช้าลง";
@@ -1992,6 +2250,7 @@ function travel(o){
  G.fuel=Math.max(0,G.fuel-o.fuel);
  if(o.runOut){ addLog(`น้ำมันหมดกลางทาง ต้องทิ้ง${G.veh}แล้วเดินต่อ`,"bad"); G.veh="เดินเท้า"; }
  const walking=(o.veh==="เดินเท้า"||o.runOut);
+ if(walking)G.flags.kmWalk=(G.flags.kmWalk||0)+e.km; G.flags.kmAll=(G.flags.kmAll||0)+e.km; if(o.runOut)G.flags.ranDry=1;
  G.stamina=clamp(G.stamina-(walking?Math.min(30,e.km*2.2)*(G.rule.flood?1.3:1):o.veh==="จักรยาน"?e.km*1.2:3),0,100);
  if(G.rule.noCar&&V.motor&&e.t!=="canal"&&chance(.16)){ const d=ri(8,16); G.hp-=d; G.noise=clamp(G.noise+2,0,10); addLog(`โดรนรัฐยิงใส่รถ กระจกแตก -${d}`,"bad"); }
  G.noise=clamp(G.noise+(V.noise||0)+(T.nz||0)+(T.dng||0),0,10);
@@ -2006,6 +2265,7 @@ function travel(o){
 function arrive(opt){
  lookAround();
  if(G.hp<=0||G.at===G.homeId||G.min>=720) return flow();
+ if(funArrive()) return;
  const H=G.hunter; if(!H.dead&&H.at===G.at) return flow();
  if(G.gangs.some(x=>x.at===G.at&&!x.met)) return flow();
  if(opt&&opt.noCard) return flow();
@@ -2593,7 +2853,7 @@ function chatSend(kind){
 }
 function renderChat(){
  setTabUI("chat"); G.unread=0; updateChatBadge(); const dead=G.phoneBat<=0;
- side.innerHTML=`<div class="scr"><div class="panel" style="padding:10px 12px"><div style="display:flex;justify-content:space-between"><b>💬 ${G.w.rel}${G.w.name?" "+G.w.name:""}</b><span class="small">🔋 ${Math.round(G.phoneBat)}%</span></div>${dead?`<div class="warnmsg">⚠️ แบตหมด ติดต่อ${G.w.n}ไม่ได้แล้ว ไม่รู้ว่าที่นั่นเป็นยังไง</div>`:""}</div><div class="chat" id="chatBox"></div><div style="clear:both" id="chatIn"></div></div>`;
+ side.innerHTML=`<div class="scr"><div class="panel" style="padding:10px 12px"><div style="display:flex;justify-content:space-between"><b><img class="chatav" src="${npcPortrait(G.w.name||"w",G.w.rel)}" alt="">${G.w.rel}${G.w.name?" "+G.w.name:""}</b><span class="small">🔋 ${Math.round(G.phoneBat)}%</span></div>${dead?`<div class="warnmsg">⚠️ แบตหมด ติดต่อ${G.w.n}ไม่ได้แล้ว ไม่รู้ว่าที่นั่นเป็นยังไง</div>`:""}</div><div class="chat" id="chatBox"></div><div style="clear:both" id="chatIn"></div></div>`;
  const box=$("#chatBox"); G.chatlog.forEach(m=>{ const d=document.createElement("div"); d.className="msg "+(m.side==="me"?"me":"them"); d.innerHTML=`${m.txt}<span class="t">${m.t}</span>`; box.appendChild(d); }); box.scrollTop=box.scrollHeight;
  if(dead||G.over) return; const C=$("#chatIn");
  (G.mode==="home"?[["📍 ถามว่าถึงไหนแล้ว","where"],["🔐 ถามรหัสลับ","code"],["🗺️ บอกทางเลี่ยงอันตราย","adv"],["💪 ให้กำลังใจ","cheer"]]:G.flags.pendingUncle?[["✅ ให้เข้า","uy"],["⛔ ไม่ให้เข้า","un"]]:[["📍 ถามว่าปลอดภัยไหม","safe"],["🔐 ถามรหัสลับ","code"],["💪 ให้กำลังใจ","cheer"],["🤫 สั่งให้ไปซ่อน","hide"]]).forEach(([l,k])=>{ const b=document.createElement("button"); b.className="btn sm"; b.textContent=l; b.onclick=()=>chatSend(k); C.appendChild(b); });
@@ -2667,12 +2927,12 @@ function finishEnding(pair){
 }
 function renderEnding(){
  ambStop(); buzz([200,100,400]); setNav(false); setTabUI("game"); app.classList.remove("glitch"); const e=G.ending, n=G.mode==="hunt"?modeN("hunt"):G.mode==="home"?modeN("home"):mainN(), nT=G.mode==="hunt"||G.mode==="home"?30:100; UI.choices=[]; UI.scene="end";
- app.innerHTML=`<div class="scr dead"><div class="big-end"><div class="ecat">${ALL_END[e.cat].cat}${e.isNew?" • ใหม่":""}</div><div class="et">${e.title}</div></div>
+ app.innerHTML=`<div class="scr dead"><div class="big-end"><div class="endcam"><img class="endpt" src="${portrait(G)}" alt=""><div><b>● CAM ${String(G.at||0).padStart(2,"0")} · ${hhmm(Math.max(0,Math.min(G.min,720)))}</b><span>${G.ending.alive?"พบเห็นครั้งสุดท้าย":"ภาพสุดท้ายที่บันทึกได้"}</span></div></div><div class="ecat">${ALL_END[e.cat].cat}${e.isNew?" • ใหม่":""}</div><div class="et">${e.title}</div></div>
  ${e.last?`<div class="panel"><div class="story small">${e.last}</div></div>`:""}<div class="panel"><div class="story">${e.text}</div>${e.epi?`<div class="narr">${e.epi}</div>`:""}</div>
  <div class="panel"><div class="kv"><span>ตัวตน</span><b>${G.gender==="m"?"ชาย":"หญิง"} ${G.age} ปี • ${G.job.name}</b></div><div class="kv"><span>ปลายทาง</span><b>${G.dest}</b></div><div class="kv"><span>${G.mode==="home"?"คนที่กำลังกลับมา":"คนที่รอ"}</span><b>${G.w.rel}${G.mode==="home"?(G.comps.some(c=>c.tr)?" • มาถึงแล้ว":" • ไม่ได้มาถึง"):""}</b></div>
  <div class="kv"><span>เวลา</span><b>${hhmm(Math.min(720,Math.max(0,G.min)))}</b></div>${G.mode==="home"?`<div class="kv"><span>บ้าน</span><b>${G.flags.breached?"ถูกพังเข้ามา":"ไม่มีใครเข้าได้"}</b></div>`:G.mode==="hunt"?`<div class="kv"><span>ค่าหัว / เป้า</span><b>${G.bounty} บาท • ${G.targets} คน • ไว้ชีวิต ${G.flags.spared||0}</b></div>`:`<div class="kv"><span>ระยะที่เหลือ</span><b>${kmLeft()} จาก ${G.map.km} กม.</b></div>`}<div class="kv"><span>ฆ่า / ช่วย</span><b>${G.kills} / ${G.helped}</b></div><div class="kv"><span>ตอนจบ${G.mode==="hunt"?"โหมดออกล่า":G.mode==="home"?"โหมดเฝ้าบ้าน":""}ที่ปลดล็อก</span><b>${n}/${nT}</b></div></div>
  <div class="narr">07:00 ไซเรนหยุด รถเก็บขยะเริ่มออกวิ่ง คนออกมาฉีดน้ำล้างหน้าบ้าน ร้านกาแฟเปิดตามปกติ ไม่มีใครพูดถึงเมื่อคืน</div>
- ${(e.extra||[]).length?`<div class="panel"><b>โบนัสคืนนี้</b><div class="small" style="margin-top:4px;color:var(--amber)">${e.extra.join("<br>")}</div></div>`:""}<div class="panel center"><b>🩸 แต้มรอด +${e.pts||0}</b> <span class="small">(รวม ${META.pts})</span><div class="small">จากระยะที่ผ่านมา คนที่ช่วย ตอนจบใหม่ และการกลับถึงบ้าน</div></div><button class="btn primary" onclick="renderCreate()">▶ คืนถัดไป (ปีที่ ${META.year})</button><button class="btn" onclick="renderPerks('end')">🧬 ใช้แต้ม: สิ่งที่ติดตัวข้ามปี</button><button class="btn ghost" onclick="renderBook()">📖 สมุดสะสมตอนจบ</button></div>`;
+ ${recapH()}${(e.extra||[]).length?`<div class="panel"><b>โบนัสคืนนี้</b><div class="small" style="margin-top:4px;color:var(--amber)">${e.extra.join("<br>")}</div></div>`:""}<div class="panel center"><b>🩸 แต้มรอด +${e.pts||0}</b> <span class="small">(รวม ${META.pts})</span><div class="small">จากระยะที่ผ่านมา คนที่ช่วย ตอนจบใหม่ และการกลับถึงบ้าน</div></div><button class="btn primary" onclick="renderCreate()">▶ คืนถัดไป (ปีที่ ${META.year})</button><button class="btn" onclick="renderPerks('end')">🧬 ใช้แต้ม: สิ่งที่ติดตัวข้ามปี</button><button class="btn ghost" onclick="renderBook()">📖 สมุดสะสมตอนจบ</button></div>`;
  const s=$("#scrim"); if(s)s.style.boxShadow="none"; window.scrollTo(0,0);
 }
 //========================= TABS =========================
@@ -2714,7 +2974,7 @@ document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ if(!G||G.ove
 function renderTitle(){
  setNav(false); setTabUI("game"); clearTimer(); ambStop(); app.classList.remove("glitch"); const s=$("#scrim"); if(s)s.style.boxShadow="none"; UI.choices=[];
  const n=mainN(), nh=modeN("hunt"), nd=modeN("home"), sv=load(SKEY,null), can=sv&&sv.v===VER&&!sv.over;
- app.innerHTML=`<div class="scr title-wrap"><div class="logo">OVERTIME<small>คืนไร้กฎ</small></div>
+ app.innerHTML=`<div class="scr title-wrap">${skylineH()}<div class="logo">OVERTIME<small>คืนไร้กฎ</small></div>${tickerH()}
  <div class="tag">ปีละหนึ่งคืน สิบสองชั่วโมง ไม่มีกฎหมาย<br>คืนนี้คุณเลิกงานไม่ทันไซเรน และมีคนรออยู่ที่บ้าน<br><b style="color:var(--red)">กลับไปให้ถึงก่อน 07:00</b></div>
  ${META.title?`<div class="small" style="color:var(--amber)">🎖️ ${META.title}</div>`:""}${META.runs?`<div class="small">ปีที่ ${META.year} • ตอนจบ ${n}/100${nh?` • 🩸 ${nh}/30`:""}${nd?` • 🏠 ${nd}/30`:""} • ผ่านมา ${META.runs} คืน</div>`:""}${META.scars.length?`<div class="small" style="color:var(--amber)">สิ่งที่ติดตัวมาจากปีก่อน: ${META.scars.join(", ")}</div>`:""}
  ${can?`<button class="btn primary" onclick="resumeRun()">⏯️ เล่นต่อ</button>`:""}<button class="btn ${can?"":"primary"}" onclick="renderCreate()">🩸 เริ่มคืนใหม่</button>
@@ -2722,6 +2982,7 @@ function renderTitle(){
  <button class="btn ghost" onclick="renderDaily()">📅 ภารกิจวันนี้ · ปฏิทิน 30 วัน (${calN()}/30)</button>
  <button class="btn ghost" onclick="renderProg()">🏆 ความคืบหน้า · Achievement (${Object.keys(META.ach).length}/${OTACH.length})</button>
  ${goalH()}${installH()}
+ <button class="btn ghost" onclick="playIntro()">🎬 ดูฉากเปิดอีกครั้ง</button>
  ${n||nh||nd?`<button class="btn ghost" onclick="renderBook()">📖 สมุดสะสมตอนจบ (${n+nh+nd}/160)</button>`:""}
  ${META.runs?`<button class="btn ghost" onclick="renderPerks()">🧬 สิ่งที่ติดตัวข้ามปี (🩸 ${META.pts})</button>`:""}
  <div class="howto"><b>เล่นยังไง</b><br>1. เดินสำรวจแต่ละที่ได้ตามใจ ค้นของ หารถ หาที่ซ่อน 🚶<br>2. เลือกเองว่าจะออกทางไหน ถนนใหญ่ ซอย ท่อ ดาดฟ้า 🧭<br>3. ไปถึง 🏠 ก่อนฟ้าสาง โดยหัวใจ ❤️ ไม่หมด</div>
@@ -2731,7 +2992,7 @@ function renderTitle(){
 function resumeRun(slot){ const s=load(slot||SKEY,null); if(!s||s.v!==VER)return renderTitle(); G=s; ambStart(); G.job=JOBS.find(j=>j.id===G.job.id)||G.job; G._c=null; G.flags=G.flags||{}; flow(); }
 function renderCreate(){
  setNav(false); setTabUI("game"); G=null; const L=META.legacy, ho=huntOpen(), hm=homeOpen();
- app.innerHTML=`<div class="scr"><h2>คืนนี้คุณเป็นใคร</h2>
+ app.innerHTML=`<div class="scr"><div class="timecard"><div class="tc-h"><b>บัตรตอกเวลา</b><span>OVERTIME / ใบที่ ${META.runs+1}</span></div><div class="tc-row"><span>เข้างาน</span><b>08:00</b></div><div class="tc-row"><span>ออกงาน</span><b class="tc-late">—:— ยังไม่ได้ตอก</b></div><div class="tc-stamp">เลยเวลาไซเรน</div></div><h2>คืนนี้คุณเป็นใคร</h2>
  <div class="sec">🏃 กลับบ้าน</div><div class="tag">เลิกงานไม่ทันไซเรน ต้องกลับไปหาคนที่รอให้ถึงก่อน 07:00 เลือกได้แค่เพศ ที่เหลือโชคชะตาเลือกให้</div>
  ${L?`<button class="btn primary" onclick="startLegacy()">🔁 คนเดิมจากปีที่แล้ว<div class="cost">${L.gender==="m"?"ชาย":"หญิง"} ${L.age} ปี • ${jobName(L.job)} • รอดมาแล้ว ${L.nights} คืน${L.scars.length?" • มีแผลติดตัว":""}${L.lost?" • ปีที่แล้วเสียคนที่รอไป":""}${(L.grudges||[]).length?" • มีคนแค้นตามมา":""}</div></button>`:""}
  <div class="grid2"><button class="btn ${L?"":"primary"}" onclick="newRun('m',$('#nm').checked,{wk:!!($('#wkr')&&$('#wkr').checked)})">♂ ${L?"คนใหม่ ":""}ชาย</button><button class="btn ${L?"":"primary"}" onclick="newRun('f',$('#nm').checked,{wk:!!($('#wkr')&&$('#wkr').checked)})">♀ ${L?"คนใหม่ ":""}หญิง</button></div>
@@ -3302,8 +3563,8 @@ function hudHome(){
  const last=G.chatlog.filter(m=>m.side==="them").slice(-1)[0], inside=G.comps.some(c=>c.tr);
  return `<div class="hud"><div class="hud-top"><span class="clock">🕐 ${hhmm(Math.max(0,G.min))}</span><span class="small">อีก ${Math.floor(tleft/60)} ชม. ${Math.round(tleft%60)} น. ฟ้าสาง</span><span class="night-badge ${ph.cls}">${ph.label}</span></div>
  <div class="road"><div class="road-fill" style="width:${clamp(G.min/720*100,0,100)}%"></div><span class="road-km">${inside?"🏠 "+G.w.n+"อยู่ในบ้านแล้ว":"📱 "+G.w.n+": "+(last?(last.txt.length>26?last.txt.slice(0,26)+"…":last.txt)+" ("+last.t+")":"ยังไม่มีข่าว")}</span></div>
- <div class="hud-row"><span class="hearts">${hs}</span><span class="gear"><span>🏠 ${HROOMS[G.room].n}</span><span>${itemIc(G.weapon)} ${G.weapon}${W.gun?` ×${G.ammo}`:""}</span></span></div>
- ${st.length?`<div class="status">${st.map(x=>`<span>${x}</span>`).join("")}</div>`:""}</div>`;
+ <div class="hud-row"><span class="hearts"><img class="hudpt" src="${portrait(G)}" alt="">${heartsH(full)}</span><span class="gear"><span>🏠 ${HROOMS[G.room].n}</span><span>${itemIc(G.weapon)} ${G.weapon}${W.gun?` ×${G.ammo}`:""}</span></span></div>
+ ${st.length?`<div class="status">${st.map(x=>`<span>${x}</span>`).join("")}</div>`:""}${G.mode==="run"?todoH():""}</div>`;
 }
 //========================= BOT (smoke test) =========================
 window.runBot=function(n,smart){ window.__BOT=true; const out={ends:{},err:[],stuck:0,arr:0,alive:0,n};
